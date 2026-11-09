@@ -1,6 +1,7 @@
 name: Alerte -5 %
 
-# Toutes les 5 minutes, du lundi au vendredi, de 14 h à 23 h environ (heure de Paris).
+# Lancé toutes les 5 minutes pendant la séance américaine par cron-job.org (appel de l'API GitHub),
+# et en secours par l'horloge de GitHub, du lundi au vendredi, de 14 h à 23 h environ (heure de Paris).
 # Le programme ne regarde les cours que pendant la séance américaine (9 h 30 – 16 h à New York)
 # et n'envoie qu'une notification par jour. GitHub peut retarder ces lancements de quelques minutes.
 on:
@@ -11,7 +12,7 @@ on:
       test_notification:
         description: "Envoyer un exemple d'alerte"
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: write
