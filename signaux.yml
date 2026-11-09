@@ -1,0 +1,45 @@
+# À placer dans le dossier .github/workflows du dépôt (chemin complet : .github/workflows/signaux.yml)
+name: Signaux
+
+# Chaque jour de bourse, après la clôture américaine (16 h à New York).
+# GitHub compte en heure UTC : deux passages couvrent l'heure d'été et l'heure d'hiver ;
+# le second ne renvoie pas de notification si la séance a déjà été traitée.
+on:
+  schedule:
+    - cron: "37 20 * * 1-5"   # 22 h 37 à Paris en été, 21 h 37 en hiver
+    - cron: "37 21 * * 1-5"   # 23 h 37 à Paris en été, 22 h 37 en hiver
+  workflow_dispatch:          # bouton « Run workflow » pour lancer à la main
+    inputs:
+      test_notification:
+        description: "Envoyer aussi une notification de test"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: signaux
+  cancel-in-progress: false
+
+jobs:
+  signaux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Calcul et notification
+        run: python suivi.py ${{ inputs.test_notification && '--test-notification' || '' }}
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SITE_URL: ${{ vars.SITE_URL }}
+      - name: Enregistrer l'état pour le site
+        run: |
+          git config user.name "suivi-strategies"
+          git config user.email "suivi-strategies@users.noreply.github.com"
+          git add etat.json historique.json
+          git diff --cached --quiet || (git commit -m "Signaux du $(date -u +%F)" && git push)
