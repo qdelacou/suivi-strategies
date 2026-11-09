@@ -3,292 +3,744 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Suivi des stratégies</title>
+<title>Mes stratégies</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
 <style>
-/* Tableau de bord : bandeau « à faire », deux comptes côte à côte, historique, journal */
+/* Mise en page : bandeau du jour, une carte par compte (cible, mes chiffres, pourquoi, ce qui ferait changer),
+   historique en graphiques, derniers changements, règles. Pensé d'abord pour le téléphone. */
 :root {
-  --bg: #f5f7f9; --surface: #ffffff; --fg: #16202b; --muted: #5d6b7a; --line: #dde3ea;
-  --pea: #1f6fd1; --cto: #b0368a; --mf: #0b7a69; --pos: #1d7a3e; --neg: #b4382f; --warn: #a15c00;
-  --warn-bg: #fdf3e3; --ok-bg: #e8f4ec;
-  --font-ui: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --bg: #f4f3ef; --surface: #ffffff; --surface-2: #f7f6f2; --fg: #161614; --fg-2: #52514e; --muted: #77766f; --line: #e3e1da;
+  --accent: #2a78d6; --accent-soft: rgba(42, 120, 214, 0.16);
+  --x0: #86b6ef; --x50: #3987e5; --x100: #104281;           /* part de LQQ : 0 %, 50 %, 100 % (rampe ordinale validée) */
+  --calc: #8a8983; --price: #3d3c39; --mf: #1baf7a; --rest: #d8d6cf;
+  --ok: #0ca30c; --ok-ink: #0b6b0b; --ok-bg: #eaf5ea;
+  --warn: #fab219; --warn-ink: #7a5000; --warn-bg: #fff3d6;
+  --font: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f1419; --surface: #171e26; --fg: #e6ebf0; --muted: #93a1b0; --line: #2a3440;
-    --pea: #6fb0ff; --cto: #f07ac4; --mf: #3fc7ab; --pos: #5fcf88; --neg: #f07a70; --warn: #f0b45a;
-    --warn-bg: #2d2416; --ok-bg: #16281d; color-scheme: dark;
+    --bg: #121211; --surface: #1c1c1a; --surface-2: #232321; --fg: #f0efec; --fg-2: #c3c2b7; --muted: #8f8e86; --line: #33332f;
+    --accent: #3987e5; --accent-soft: rgba(57, 135, 229, 0.22);
+    --x0: #184f95; --x50: #3987e5; --x100: #9ec5f4;
+    --calc: #8f8e86; --price: #d6d5ce; --mf: #199e70; --rest: #3b3b37;
+    --ok: #0ca30c; --ok-ink: #6fd36f; --ok-bg: #16261a;
+    --warn: #fab219; --warn-ink: #f6c45a; --warn-bg: #2b2414;
+    color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0f1419; --surface: #171e26; --fg: #e6ebf0; --muted: #93a1b0; --line: #2a3440;
-  --pea: #6fb0ff; --cto: #f07ac4; --mf: #3fc7ab; --pos: #5fcf88; --neg: #f07a70; --warn: #f0b45a;
-  --warn-bg: #2d2416; --ok-bg: #16281d; color-scheme: dark;
+  --bg: #121211; --surface: #1c1c1a; --surface-2: #232321; --fg: #f0efec; --fg-2: #c3c2b7; --muted: #8f8e86; --line: #33332f;
+  --accent: #3987e5; --accent-soft: rgba(57, 135, 229, 0.22);
+  --x0: #184f95; --x50: #3987e5; --x100: #9ec5f4;
+  --calc: #8f8e86; --price: #d6d5ce; --mf: #199e70; --rest: #3b3b37;
+  --ok: #0ca30c; --ok-ink: #6fd36f; --ok-bg: #16261a;
+  --warn: #fab219; --warn-ink: #f6c45a; --warn-bg: #2b2414;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-ui); }
-.wrap { max-width: 1040px; margin: 0 auto; padding: 24px max(16px, env(safe-area-inset-right)) 48px max(16px, env(safe-area-inset-left)); display: grid; gap: 20px; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 var(--font); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 20px max(16px, env(safe-area-inset-right)) 56px max(16px, env(safe-area-inset-left)); display: grid; gap: 18px; }
 .wrap > * { min-width: 0; }
-header h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.01em; }
-header p { margin: 4px 0 0; color: var(--muted); }
-.banner { border-radius: 12px; padding: 14px 18px; border: 1px solid var(--line); background: var(--surface); display: grid; gap: 10px; }
-.banner.todo { background: var(--warn-bg); border-color: var(--warn); }
-.banner.ok { background: var(--ok-bg); }
-.banner h2 { margin: 0; font-size: 1.05rem; }
-.banner ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
-.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-@media (max-width: 820px) { .cols { grid-template-columns: 1fr; } }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 14px; align-content: start; min-width: 0; }
-.card h2 { margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
-.sw { width: 14px; height: 4px; border-radius: 2px; flex: none; }
-.big { font: 500 2.2rem/1.1 var(--font-num); }
-.sub { color: var(--muted); font-size: 0.88rem; margin: 0; }
-.lab { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
-table.ind { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
-table.ind td { padding: 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
-table.ind tr:last-child td { border-bottom: 0; }
-table.ind td:first-child { color: var(--muted); padding-right: 10px; }
-table.ind td.v { text-align: right; font-family: var(--font-num); white-space: nowrap; padding-left: 10px; }
-table.ind small { display: block; color: var(--muted); font-size: 0.8rem; }
-.calc { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
-.row { display: flex; flex-wrap: wrap; gap: 12px; }
-.field { display: grid; gap: 4px; flex: 1 1 140px; min-width: 0; }
-.field label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
-.field input { font: 500 1rem var(--font-num); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
-.field input:focus-visible { outline: 2px solid var(--pea); outline-offset: 1px; }
-.out { display: grid; gap: 6px; font-size: 0.95rem; }
-.out b { font-family: var(--font-num); font-weight: 500; }
-.tag { display: inline-block; font-size: 0.75rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); }
-.tag.on { color: var(--neg); border-color: var(--neg); }
-.tag.off { color: var(--pos); border-color: var(--pos); }
-.pos { color: var(--pos); } .neg { color: var(--neg); }
-.chart { width: 100%; height: 150px; display: block; }
-.chartbox { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 6px; }
-.journal { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.journal li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
-.journal time { color: var(--muted); font-size: 0.82rem; font-family: var(--font-num); }
-.note { color: var(--muted); font-size: 0.85rem; margin: 0; max-width: 80ch; }
+h1, h2, h3, p { margin: 0; }
+header { display: grid; gap: 2px; }
+header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; }
+header p { color: var(--muted); font-size: 0.88rem; }
+.stale { color: var(--warn-ink); }
+
+/* ---- bandeau du jour */
+.today { border-radius: 16px; padding: 16px 18px; display: grid; gap: 10px; border: 1px solid var(--line); background: var(--surface); }
+.today.ok { background: var(--ok-bg); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+.today.todo { background: var(--warn-bg); border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
+.today .head { display: flex; gap: 10px; align-items: center; }
+.today h2 { font-size: 1.15rem; font-weight: 700; }
+.today p { color: var(--fg-2); }
+.ico { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 0.95rem; }
+.ok .ico { background: var(--ok); }
+.todo .ico { background: var(--warn); color: #3b2a00; }
+.orders { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.orders li { background: var(--surface); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; }
+.orders .what { font-weight: 600; font-size: 1.02rem; }
+.orders .when, .orders .why { color: var(--fg-2); font-size: 0.9rem; }
+.acct { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; padding: 1px 7px; border-radius: 6px; background: var(--surface-2); color: var(--fg-2); border: 1px solid var(--line); margin-right: 6px; vertical-align: 1px; }
+
+/* ---- cartes des comptes */
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+@media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; gap: 18px; min-width: 0; }
+.card-head { display: grid; gap: 2px; }
+.card-head h2 { font-size: 1.15rem; font-weight: 700; }
+.card-head p { color: var(--muted); font-size: 0.88rem; }
+.target { display: grid; gap: 10px; }
+.big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.big b { font-size: 2.6rem; line-height: 1; font-weight: 600; letter-spacing: -0.02em; }
+.big span { color: var(--fg-2); }
+.big .chg { font-size: 0.9rem; color: var(--warn-ink); font-weight: 600; }
+.bar { display: flex; gap: 2px; height: 14px; border-radius: 7px; overflow: hidden; background: var(--rest); }
+.bar i { display: block; height: 100%; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.88rem; color: var(--fg-2); }
+.legend-row span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 3px; flex: none; display: inline-block; }
+.track { position: relative; height: 14px; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 0 7px 7px 0; }
+.track u { position: absolute; top: -1px; bottom: -1px; width: 2px; background: var(--fg-2); }
+.note { color: var(--muted); font-size: 0.86rem; }
+.cap { font-size: 0.9rem; color: var(--fg-2); margin-top: 4px; }
+.cap b { color: var(--fg); }
+.lead { color: var(--fg); font-size: 0.97rem; }
+details.sub summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 0.9rem; padding: 2px 0; }
+details.sub[open] summary { margin-bottom: 8px; }
+
+.block { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 16px; }
+.block h3 { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label { font-size: 0.82rem; color: var(--fg-2); }
+.field input { font: 500 1.05rem var(--font); font-variant-numeric: tabular-nums; color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; width: 100%; min-width: 0; }
+.field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.checks li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; }
+.mark { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 0.8rem; font-weight: 700; margin-top: 1px; }
+.mark.ok { background: var(--ok-bg); color: var(--ok-ink); border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent); }
+.mark.todo { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid color-mix(in srgb, var(--warn) 60%, transparent); }
+.mark.info { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.checks b { font-weight: 600; }
+.checks small { display: block; color: var(--muted); font-size: 0.84rem; }
+
+.why { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.why li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.why li:last-child { border-bottom: 0; }
+.why .k { color: var(--fg-2); font-size: 0.92rem; }
+.why .v { font-weight: 600; text-align: right; white-space: nowrap; }
+.why .e { grid-column: 1 / -1; font-size: 0.86rem; color: var(--muted); }
+.why .e.lim { color: var(--warn-ink); }
+.next { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.next li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; font-size: 0.93rem; color: var(--fg-2); }
+.next .arr { font-weight: 700; color: var(--fg); text-align: center; }
+.gauge { width: 100%; height: 86px; display: block; }
+
+/* ---- historique */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.panel-head h2 { font-size: 1.15rem; font-weight: 700; }
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button { font: 600 0.85rem var(--font); color: var(--fg-2); background: transparent; border: 0; border-radius: 7px; padding: 6px 10px; cursor: pointer; min-height: 32px; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 0 0 1px var(--line); }
+.chartbox { display: grid; gap: 8px; min-width: 0; }
+.chartbox h3 { font-size: 1rem; font-weight: 600; }
+.readout { font-size: 0.88rem; color: var(--fg-2); min-height: 1.4em; }
+.readout b { color: var(--fg); font-weight: 600; }
+.chart { height: 330px; width: 100%; position: relative; }
+.xaxis { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-top: -2px; padding-right: 56px; }
+@media (max-width: 560px) { .chart { height: 290px; } }
+.stats { font-size: 0.88rem; color: var(--fg-2); }
+.line-sw { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+.dash-sw { width: 16px; height: 0; border-top: 2px dashed var(--calc); display: inline-block; }
+.changes { list-style: none; margin: 0; padding: 0; display: grid; }
+.changes li { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; padding: 9px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.changes li:last-child { border-bottom: 0; }
+.changes time { color: var(--muted); font-size: 0.86rem; white-space: nowrap; }
+.more { justify-self: start; font: 600 0.9rem var(--font); color: var(--accent); background: none; border: 0; padding: 6px 0; cursor: pointer; }
+details.rules { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 4px 18px; }
+details.rules summary { cursor: pointer; font-weight: 700; padding: 12px 0; }
+details.rules ul { margin: 0 0 14px; padding-left: 1.1em; display: grid; gap: 6px; color: var(--fg-2); font-size: 0.93rem; }
+footer { color: var(--muted); font-size: 0.82rem; max-width: 80ch; }
+footer a { color: inherit; }
 .empty { color: var(--muted); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>Suivi des stratégies</h1>
+    <h1>Mes stratégies</h1>
     <p id="maj">Chargement…</p>
   </header>
 
-  <section class="banner" id="banner" aria-live="polite"></section>
+  <section class="today" id="today" aria-live="polite"></section>
 
   <div class="cols">
-    <article class="card">
-      <h2><span class="sw" style="background:var(--pea)"></span>PEA : LQQ, volatilité courte 100/50/0</h2>
-      <div>
-        <span class="lab">Part de LQQ à détenir</span>
-        <div class="big" id="pea-part">–</div>
-        <p class="sub" id="pea-sub"></p>
+    <!-- ======================= PEA -->
+    <article class="card" id="pea">
+      <div class="card-head">
+        <h2>PEA</h2>
+        <p>LQQ (Nasdaq-100 ×2) · volatilité courte 100/50/0 + frein rapide</p>
       </div>
-      <table class="ind" id="pea-ind"></table>
-      <div class="calc">
-        <span class="lab">Ce que ça donne sur ton PEA</span>
-        <div class="row">
-          <div class="field"><label for="pea-v">Valeur du PEA (€)</label><input id="pea-v" type="number" min="0" step="100" inputmode="decimal"></div>
-          <div class="field"><label for="pea-l">Dont LQQ aujourd'hui (€)</label><input id="pea-l" type="number" min="0" step="100" inputmode="decimal"></div>
+      <div class="target">
+        <div class="big"><b id="pea-big">–</b><span>de LQQ</span><span class="chg" id="pea-chg"></span></div>
+        <div class="bar" id="pea-bar" aria-hidden="true"></div>
+        <div class="legend-row" id="pea-legend"></div>
+      </div>
+      <div class="block">
+        <h3>Mon PEA</h3>
+        <div class="fields">
+          <div class="field"><label for="pea-v">Valeur totale (€)</label><input id="pea-v" type="number" min="0" step="100" inputmode="decimal" placeholder="ex. 60000"></div>
+          <div class="field"><label for="pea-l">Dont LQQ (€)</label><input id="pea-l" type="number" min="0" step="100" inputmode="decimal" placeholder="ex. 30000"></div>
         </div>
-        <div class="out" id="pea-out"></div>
+        <ul class="checks" id="pea-checks"></ul>
+      </div>
+      <div class="block">
+        <h3 id="pea-why-title">Pourquoi</h3>
+        <p class="lead" id="pea-why-lead"></p>
+        <details class="sub"><summary>Détail des indicateurs</summary><ul class="why" id="pea-why"></ul></details>
+      </div>
+      <div class="block">
+        <h3>Qu'est-ce qui la ferait changer ?</h3>
+        <p class="lead" id="pea-next-lead"></p>
+        <details class="sub"><summary>Tous les seuils</summary><ul class="next" id="pea-next"></ul></details>
       </div>
     </article>
 
-    <article class="card">
-      <h2><span class="sw" style="background:var(--cto)"></span>CTO société : futures S&amp;P 500 + managed futures</h2>
-      <div>
-        <span class="lab">Levier des futures S&amp;P 500</span>
-        <div class="big" id="cto-lev">–</div>
-        <p class="sub" id="cto-sub"></p>
+    <!-- ======================= CTO -->
+    <article class="card" id="cto">
+      <div class="card-head">
+        <h2>CTO de la société</h2>
+        <p>Futures S&amp;P 500 (MES) + ETF managed futures · chez IBKR</p>
       </div>
-      <table class="ind" id="cto-ind"></table>
-      <div class="calc">
-        <span class="lab">Ce que ça donne sur ton compte IBKR</span>
-        <div class="row">
-          <div class="field"><label for="cto-v">Valeur du compte (€)</label><input id="cto-v" type="number" min="0" step="1000" inputmode="decimal"></div>
-          <div class="field"><label for="cto-m">Dont ETF managed futures (€)</label><input id="cto-m" type="number" min="0" step="1000" inputmode="decimal"></div>
-          <div class="field"><label for="cto-n">MES détenus</label><input id="cto-n" type="number" min="0" step="1" inputmode="numeric"></div>
+      <div class="target">
+        <div class="big"><b id="cto-big">–</b><span>de levier sur les futures</span><span class="chg" id="cto-chg"></span></div>
+        <p class="cap" id="cto-expo-cap"></p>
+        <div class="track" aria-hidden="true"><i id="cto-expo"></i><u id="cto-100"></u></div>
+        <p class="note" id="cto-expo-txt"></p>
+        <p class="cap">Répartition du compte</p>
+        <div class="bar" id="cto-bar" aria-hidden="true"></div>
+        <div class="legend-row" id="cto-legend"></div>
+      </div>
+      <div class="block">
+        <h3>Mon compte IBKR</h3>
+        <div class="fields">
+          <div class="field"><label for="cto-v">Valeur du compte (€)</label><input id="cto-v" type="number" min="0" step="1000" inputmode="decimal" placeholder="ex. 200000"></div>
+          <div class="field"><label for="cto-m">Dont ETF managed fut. (€)</label><input id="cto-m" type="number" min="0" step="1000" inputmode="decimal" placeholder="ex. 100000"></div>
+          <div class="field"><label for="cto-n">Contrats MES détenus</label><input id="cto-n" type="number" min="0" step="1" inputmode="numeric" placeholder="ex. 9"></div>
         </div>
-        <div class="out" id="cto-out"></div>
+        <ul class="checks" id="cto-checks"></ul>
+      </div>
+      <div class="block">
+        <h3 id="cto-why-title">Pourquoi</h3>
+        <p class="lead" id="cto-why-lead"></p>
+        <details class="sub"><summary>Détail des indicateurs</summary><ul class="why" id="cto-why"></ul></details>
+      </div>
+      <div class="block">
+        <h3>Qu'est-ce qui le ferait changer ?</h3>
+        <svg class="gauge" id="cto-gauge" role="img" aria-label="Zone de maintien du levier"></svg>
+        <p class="lead" id="cto-gauge-txt"></p>
+        <details class="sub"><summary>Tous les seuils</summary><ul class="next" id="cto-next"></ul></details>
       </div>
     </article>
   </div>
 
-  <div class="cols">
-    <div class="chartbox">
-      <span class="lab">Part de LQQ visée, 2 dernières années</span>
-      <svg class="chart" id="ch-pea" role="img" aria-label="Historique de la part de LQQ visée"></svg>
+  <!-- ======================= HISTORIQUE -->
+  <section class="panel" id="histo">
+    <div class="panel-head">
+      <h2>Historique</h2>
+      <div class="seg" role="group" aria-label="Période affichée" id="periods">
+        <button type="button" data-y="1">1 an</button>
+        <button type="button" data-y="5" aria-pressed="true">5 ans</button>
+        <button type="button" data-y="10">10 ans</button>
+        <button type="button" data-y="20">20 ans</button>
+        <button type="button" data-y="0">Tout</button>
+      </div>
     </div>
     <div class="chartbox">
-      <span class="lab">Levier des futures, 2 dernières années</span>
-      <svg class="chart" id="ch-cto" role="img" aria-label="Historique du levier des futures S&P 500"></svg>
+      <h3>PEA · Nasdaq-100 et part de LQQ</h3>
+      <div class="legend-row">
+        <span><i class="line-sw" style="background:var(--x100)"></i>100&nbsp;% LQQ</span>
+        <span><i class="line-sw" style="background:var(--x50)"></i>50&nbsp;%</span>
+        <span><i class="line-sw" style="background:var(--x0)"></i>0&nbsp;%</span>
+        <span>En bas : part de LQQ</span>
+      </div>
+      <div class="readout" id="ro-pea"></div>
+      <div class="chart" id="ch-pea"></div>
+      <div class="xaxis" id="xa-pea"><span></span><span></span><span></span></div>
+      <p class="stats" id="st-pea"></p>
     </div>
-  </div>
-
-  <section>
-    <h2 style="margin:0 0 10px;font-size:1.05rem">Journal des notifications</h2>
-    <ul class="journal" id="journal"></ul>
+    <div class="chartbox" style="border-top:1px solid var(--line);padding-top:14px">
+      <h3>CTO · S&amp;P 500 et levier des futures</h3>
+      <div class="legend-row">
+        <span><i class="line-sw" style="background:var(--price)"></i>S&amp;P 500</span>
+        <span><i class="sw" style="background:var(--accent)"></i>Levier retenu</span>
+        <span><i class="dash-sw"></i>Levier calculé</span>
+      </div>
+      <div class="readout" id="ro-cto"></div>
+      <div class="chart" id="ch-cto"></div>
+      <div class="xaxis" id="xa-cto"><span></span><span></span><span></span></div>
+      <p class="stats" id="st-cto"></p>
+    </div>
+    <p class="note">Glisse le doigt sur un graphique pour lire une date ; pince pour zoomer. Échelle logarithmique : une même hauteur correspond à une même variation en %.</p>
   </section>
 
-  <p class="note">Calcul chaque jour de bourse après la clôture américaine, sur les cours de Yahoo Finance, avec exactement les règles des simulateurs (vérifiées sur tout l'historique). PEA : l'ordre se passe le lendemain du signal sur Euronext, comme dans le simulateur Nasdaq. CTO : le levier se change le lendemain juste avant la clôture américaine ; le coupe-circuit à −5 % passe par un ordre conditionnel placé à l'avance chez IBKR, car une notification arriverait trop tard. Les montants que tu saisis restent dans ce navigateur, ils ne sont envoyés nulle part. Ce n'est pas un conseil financier.</p>
+  <section class="panel">
+    <div class="panel-head"><h2>Derniers changements</h2></div>
+    <ul class="changes" id="changes"><li class="empty">Chargement…</li></ul>
+    <button type="button" class="more" id="more" hidden>Afficher plus</button>
+  </section>
+
+  <details class="rules">
+    <summary>Comment marche la stratégie du PEA</summary>
+    <ul>
+      <li>Trois positions seulement : 100&nbsp;%, 50&nbsp;% ou 0&nbsp;% du PEA en LQQ, le reste en ETF monétaire.</li>
+      <li><b>Agitation du marché</b> : volatilité du Nasdaq-100 sur 7 séances. Au-dessus de 34&nbsp;%, LQQ passe à 50&nbsp;% ; il remonte à 100&nbsp;% quand elle redescend sous 30&nbsp;%. Au-dessus de 60&nbsp;%, il passe à 0&nbsp;% ; il remonte à 50&nbsp;% sous 50&nbsp;%.</li>
+      <li><b>Frein rapide</b> : si le Nasdaq-100 clôture plus de 10&nbsp;% sous son plus haut des 20 dernières séances, LQQ est limité à 50&nbsp;%, jusqu'à ce que l'indice revienne à moins de 5&nbsp;% de ce plus haut. Ce n'est pas une sortie complète.</li>
+      <li><b>Frein de krach</b> : 0&nbsp;% après 3 clôtures de suite à plus de 20&nbsp;% sous le plus haut des 12 derniers mois et sous la moyenne des 200 dernières séances ; levé dès qu'une des deux conditions disparaît.</li>
+      <li><b>Quand agir</b> : le signal tombe le soir après la clôture américaine ; l'ordre se passe le lendemain sur Euronext, de préférence entre 17 h et 17 h 25.</li>
+      <li><b>Entre deux ordres</b>, on ne rééquilibre pas : la part de LQQ bouge avec les cours, c'est normal. Les versements se répartissent selon la part du moment.</li>
+    </ul>
+  </details>
+  <details class="rules">
+    <summary>Comment marche la stratégie du CTO</summary>
+    <ul>
+      <li>La moitié du compte en ETF managed futures, l'autre moitié en liquidités qui servent de marge. Les futures S&amp;P 500 (contrats micro MES) portent sur la valeur totale du compte.</li>
+      <li><b>Levier calculé</b> chaque soir : 40&nbsp;% ÷ la plus forte des volatilités du S&amp;P 500 sur 10 et 20 séances, plafonné à 4×. Marché calme → levier élevé ; marché agité → levier faible.</li>
+      <li><b>Tendance</b> : si le S&amp;P 500 clôture plus de 2&nbsp;% sous sa moyenne des 200 dernières séances, le levier calculé est divisé par 4, jusqu'à un retour à plus de 1&nbsp;% au-dessus.</li>
+      <li><b>Zone de maintien</b> : le levier retenu ne change que si le levier calculé s'en écarte de plus de 1. Il prend alors la valeur calculée du jour. Ça évite de trader pour de petites variations. Cette règle porte sur le levier de la stratégie, pas sur ton nombre de contrats.</li>
+      <li><b>Contrats</b> : nombre de MES = levier × valeur du compte en dollars ÷ (5 × cours de l'ES), arrondi. Entre deux changements de levier, ajuste seulement quand l'écart atteint 1 contrat.</li>
+      <li><b>Frein de krach</b> : levier 0 après 3 clôtures à plus de 14&nbsp;% sous le plus haut sur 12 mois et sous la moyenne des 200 séances.</li>
+      <li><b>Coupe-circuit</b> : si le S&amp;P 500 touche −5&nbsp;% dans la journée, un ordre conditionnel placé à l'avance chez IBKR ramène le levier à 1× jusqu'au lendemain. Une alerte t'avertit aussi sur ton téléphone.</li>
+      <li><b>ETF managed futures</b> : retour à 50&nbsp;% du compte chaque 1er janvier, ou dès que les liquidités tombent sous 10&nbsp;% du compte.</li>
+      <li><b>Quand agir</b> : le levier se change le lendemain du signal, juste avant la clôture américaine.</li>
+    </ul>
+  </details>
+
+  <footer>Calcul chaque jour de bourse après la clôture américaine, sur les cours de Yahoo Finance, avec les règles exactes des simulateurs. Les montants que tu saisis restent sur cet appareil, ils ne sont envoyés nulle part. Graphiques : <a href="https://www.tradingview.com/" rel="noopener">TradingView Lightweight Charts</a>. Ce n'est pas un conseil financier.</footer>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.9/dist/lightweight-charts.standalone.production.js"></script>
 <script>
 (function () {
+  "use strict";
   const $ = id => document.getElementById(id);
-  const nf1 = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const nf0 = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
-  const nf4 = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
-  const eur = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
-  const pct = (x, s) => (s && x > 0 ? "+" : x < 0 ? "−" : "") + nf1.format(Math.abs(x * 100)) + " %";
+  const nf1 = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const nf2 = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const eur = v => nf0.format(Math.round(v)) + " €";
+  const pct = (x, sign) => (sign && x > 0 ? "+" : x < 0 ? "−" : "") + nf1.format(Math.abs(x * 100)) + "\u00a0%";
+  const pct0 = x => nf0.format(Math.round(x * 100)) + "\u00a0%";
   const lev = x => nf1.format(x) + "×";
-  const dfmt = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
-  const jour = iso => dfmt.format(new Date(iso + "T00:00:00Z"));
+  const lev2 = x => nf2.format(x) + "×";
+  const dLong = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  const dShort = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  const iso2date = s => new Date(s + "T00:00:00Z");
+  const jour = s => dLong.format(iso2date(s));
+  const Jour = s => { const t = jour(s); return t.charAt(0).toUpperCase() + t.slice(1); };
+  const court = s => dShort.format(iso2date(s));
   const el = (tag, txt, cls) => { const e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; };
   const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const num = id => { const v = $(id).value.trim(); return v === "" ? null : +v; };
   let E = null, H = null;
 
-  function ind(table, rows) {
-    table.textContent = "";
-    for (const [k, v, note, cls] of rows) {
-      const tr = el("tr"), a = el("td"), b = el("td", null, "v");
-      a.append(document.createTextNode(k)); if (note) a.append(el("small", note));
-      if (v instanceof Node) b.append(v); else { b.textContent = v; if (cls) b.classList.add(cls); }
-      tr.append(a, b); table.append(tr);
-    }
+  // ----------------------------------------------------------------- calculs communs
+  function peaCalc() {
+    const p = E.pea, V = num("pea-v"), L = num("pea-l");
+    if (!V || V <= 0) return { V: null };
+    const share = L == null ? null : L / V, cible = p.part * V;
+    return { V, L, share, cible, diff: L == null ? null : cible - L };
   }
-  const tag = on => el("span", on ? "actif" : "inactif", "tag " + (on ? "on" : "off"));
+  function ctoCalc() {
+    const c = E.cto, V = num("cto-v"), M = num("cto-m"), n = num("cto-n");
+    if (!V || V <= 0) return { V: null };
+    const parMes = c.es * c.mes_point_usd / c.eurusd;          // valeur d'un MES en euros
+    const exact = c.levier * V / parMes, N = Math.round(exact), N1 = Math.round(V / parMes);
+    return { V, M, n, parMes, exact, N, N1 };
+  }
+  const changeP = () => E.pea.part !== E.pea.part_veille;
+  const changeC = () => Math.abs(E.cto.levier - E.cto.levier_veille) > 1e-9;
 
-  function renderPea() {
-    const p = E.pea, s = p.seuils;
-    $("pea-part").textContent = Math.round(p.part * 100) + " %";
-    $("pea-sub").textContent = p.part !== p.part_veille
-      ? "À changer " + jour(E.prochaine) + " sur Euronext (aujourd'hui " + Math.round(p.part_veille * 100) + " %)."
-      : "Inchangé. Le reste du PEA en ETF monétaire.";
-    const pal = p.palier_vol;
-    const seuil = pal === 1 ? "passe à 50 % au-dessus de " + Math.round(s.baisse_50 * 100) + " %"
-      : pal === 0.5 ? "remonte à 100 % sous " + Math.round(s.remonte_100 * 100) + " %, descend à 0 % au-dessus de " + Math.round(s.baisse_0 * 100) + " %"
-      : "remonte à 50 % sous " + Math.round(s.remonte_50 * 100) + " %";
-    ind($("pea-ind"), [
-      ["Nasdaq-100 à la clôture du " + jour(p.seance).replace(/^\S+ /, ""), nf0.format(p.cloture) + " (" + pct(p.variation, true) + ")"],
-      ["Volatilité sur 7 séances", pct(p.vol7), "Palier " + Math.round(pal * 100) + " % : " + seuil],
-      ["Écart au plus haut de 20 séances", pct(p.ecart_haut20, true), "Frein rapide (50 % max) au-delà de −" + Math.round(s.frein_rapide * 100) + " %, levé au-dessus de −" + Math.round(s.frein_rapide_fin * 100) + " %"],
-      ["Frein rapide", tag(p.frein_rapide)],
-      ["Frein de krach", tag(p.frein_krach), "0 % après 3 clôtures à plus de 20 % sous le plus haut sur 12 mois et sous la MM200"],
-      ["Coupe-circuit (information)", tag(p.coupe_circuit), "Plus bas du jour : " + pct(p.plus_bas, true) + ". " + (p.coupe_circuit_applique ? "50 % max pour une séance à −5 %." : "Non appliqué sur le PEA : il n'est utile qu'exécuté le jour même, avant 17 h 30, et la notification arrive après.")]
-    ]);
-    const V = +$("pea-v").value || 0, L = +$("pea-l").value || 0, out = $("pea-out"); out.textContent = "";
-    if (V > 0) {
-      const cible = V * p.part, diff = cible - L;
-      out.append(el("div", "Cible : " + eur.format(cible) + " de LQQ et " + eur.format(V - cible) + " d'ETF monétaire."));
-      if (L > 0 || p.part === 0) {
-        const d = el("div"); d.append(document.createTextNode(Math.abs(diff) < Math.max(50, 0.01 * V) ? "Rien à acheter ni à vendre." : (diff > 0 ? "Acheter " : "Vendre ")));
-        if (Math.abs(diff) >= Math.max(50, 0.01 * V)) { d.append(el("b", eur.format(Math.abs(diff)))); d.append(document.createTextNode(" de LQQ, et l'inverse en ETF monétaire.")); }
-        out.append(d);
+  // ----------------------------------------------------------------- bandeau du jour
+  function renderToday() {
+    const t = $("today"); t.textContent = "";
+    const orders = [];
+    if (changeP()) {
+      const p = E.pea, k = peaCalc(), avant = pct0(p.part_veille), apres = pct0(p.part);
+      let what = "Passer LQQ de " + avant + " à " + apres + " du PEA";
+      if (k.V && k.L != null) {
+        const d = p.part * k.V - k.L;
+        what = (d < 0 ? "Vendre " : "Acheter ") + eur(Math.abs(d)) + " de LQQ (" + avant + " → " + apres + ")";
       }
-    } else out.append(el("div", "Saisis la valeur de ton PEA pour voir les montants.", "empty"));
+      orders.push({ acct: "PEA", what, when: Jour(E.prochaine) + " sur Euronext, de préférence entre 17 h et 17 h 25. " + (p.part < p.part_veille ? "Le produit de la vente va en ETF monétaire." : "À financer en vendant de l'ETF monétaire."),
+        why: raisonPea() });
+    }
+    if (changeC()) {
+      const c = E.cto, k = ctoCalc();
+      let what = "Passer le levier des futures de " + lev(c.levier_veille) + " à " + lev(c.levier);
+      if (k.V && k.n != null) {
+        const d = k.N - k.n;
+        what = d === 0 ? "Garder " + k.N + " MES (levier " + lev(c.levier) + ")" : (d < 0 ? "Vendre " : "Acheter ") + Math.abs(d) + " MES pour finir à " + k.N + " (levier " + lev(c.levier_veille) + " → " + lev(c.levier) + ")";
+      } else if (k.V) what += " : " + k.N + " MES au total";
+      orders.push({ acct: "CTO", what, when: Jour(E.prochaine) + " juste avant la clôture américaine, entre " + c.heure_ordre.replace("–", "et") + " (heure de Paris). Mets ensuite à jour l'ordre conditionnel.", why: raisonCto() });
+    }
+    for (const a of E.alertes) orders.push({ acct: a.compte, what: a.titre.replace(/^\w+ : /, ""), when: a.texte, why: "" });
+
+    const head = el("div", null, "head"), ico = el("span", orders.length ? "!" : "✓", "ico"); ico.setAttribute("aria-hidden", "true");
+    t.className = "today " + (orders.length ? "todo" : "ok");
+    head.append(ico, el("h2", Jour(E.prochaine) + (orders.length ? (orders.length > 1 ? " : " + orders.length + " choses à faire" : " : 1 chose à faire") : " : rien à changer")));
+    t.append(head);
+    if (!orders.length) {
+      t.append(el("p", "Les deux stratégies gardent la même cible qu'hier. Vérifie seulement que tes comptes correspondent aux cibles ci-dessous (les coches vertes)."));
+      return;
+    }
+    const ul = el("ul", null, "orders");
+    for (const o of orders) {
+      const li = el("li"), w = el("div", null, "what");
+      w.append(el("span", o.acct, "acct"), document.createTextNode(o.what));
+      li.append(w, el("div", o.when, "when"));
+      if (o.why) li.append(el("div", "Pourquoi : " + o.why, "why"));
+      ul.append(li);
+    }
+    t.append(ul);
   }
 
+  function raisonPea() {
+    const p = E.pea;
+    if (p.frein_krach) return "frein de krach (Nasdaq-100 à plus de 20 % sous son plus haut sur 12 mois et sous sa moyenne 200 séances).";
+    if (p.frein_rapide && p.palier_vol > p.part) return "frein rapide : le Nasdaq-100 est " + pct(p.ecart_haut20, true) + " sous son plus haut des 20 séances.";
+    return "volatilité du Nasdaq-100 sur 7 séances à " + pct(p.vol7) + ".";
+  }
+  function raisonCto() {
+    const c = E.cto;
+    if (c.frein_krach) return "frein de krach.";
+    if (!c.tendance_haussiere && c.levier < c.levier_veille) return "S&P 500 passé sous sa moyenne 200 séances : levier divisé par 4.";
+    return "le levier calculé (" + lev2(c.levier_vise) + ") est sorti de la zone de maintien autour de " + lev(c.levier_veille) + ".";
+  }
+
+  // ----------------------------------------------------------------- PEA
+  function renderPea() {
+    const p = E.pea, s = p.seuils, k = peaCalc();
+    $("pea-big").textContent = pct0(p.part);
+    $("pea-chg").textContent = changeP() ? "à partir de " + jour(E.prochaine) + " (aujourd'hui " + pct0(p.part_veille) + ")" : "";
+    const bar = $("pea-bar"); bar.textContent = "";
+    if (p.part > 0) { const i = el("i"); i.style.width = p.part * 100 + "%"; i.style.background = "var(--accent)"; bar.append(i); }
+    if (p.part < 1) { const i = el("i"); i.style.flex = "1"; i.style.background = "var(--rest)"; bar.append(i); }
+    const lg = $("pea-legend"); lg.textContent = "";
+    const item = (color, txt) => { const sp = el("span"); const sw = el("i", null, "sw"); sw.style.background = color; sp.append(sw, document.createTextNode(txt)); lg.append(sp); };
+    item("var(--accent)", "LQQ " + pct0(p.part) + (k.V ? " · " + eur(k.cible) : ""));
+    item("var(--rest)", "ETF monétaire " + pct0(1 - p.part) + (k.V ? " · " + eur(k.V - k.cible) : ""));
+
+    // mes chiffres
+    const ck = $("pea-checks"); ck.textContent = "";
+    if (!k.V) ck.append(check("info", "Saisis la valeur de ton PEA", "pour avoir les montants exacts à détenir."));
+    else if (k.L == null) ck.append(check("info", "Cible : " + eur(k.cible) + " de LQQ", "Saisis aussi ton montant de LQQ pour vérifier ta position."));
+    else if (changeP()) ck.append(check("todo", (k.diff < 0 ? "Vendre " : "Acheter ") + eur(Math.abs(k.diff)) + " de LQQ " + jour(E.prochaine),
+      "Pour passer de " + pct0(k.share) + " à " + pct0(p.part) + " du PEA, sur Euronext entre 17 h et 17 h 25."));
+    else if (Math.abs(k.share - p.part) <= 0.2) ck.append(check("ok", "Ton PEA est bon : " + pct0(k.share) + " de LQQ",
+      Math.abs(k.share - p.part) < 0.01 ? "Pile sur la cible." : "L'écart avec " + pct0(p.part) + " vient des cours : on ne rééquilibre pas entre deux ordres."));
+    else ck.append(check("todo", (k.diff < 0 ? "Vendre " : "Acheter ") + eur(Math.abs(k.diff)) + " de LQQ",
+      "Tu es à " + pct0(k.share) + " de LQQ pour une cible de " + pct0(p.part) + " : aligne-toi (prochaine séance Euronext, 17 h – 17 h 25)."));
+    if (k.V) ck.append(check("info", "Versements", "Répartis-les comme la cible : " + pct0(p.part) + " en LQQ, " + pct0(1 - p.part) + " en ETF monétaire."));
+
+    // pourquoi
+    $("pea-why-title").textContent = "Pourquoi " + pct0(p.part) + " ?";
+    const w = $("pea-why"); w.textContent = "";
+    const pal = p.palier_vol;
+    why(w, "Agitation du Nasdaq-100 (volatilité sur 7 séances)", pct(p.vol7),
+      pal === 1 ? "Sous 34 % : pas de limite." : pal === 0.5 ? "Au-dessus de 34 % et pas encore revenue sous 30 % : LQQ limité à 50 %." : "Au-dessus de 60 % et pas encore revenue sous 50 % : LQQ à 0 %.", pal < 1);
+    why(w, "Recul depuis le plus haut des 20 séances", pct(p.ecart_haut20, true),
+      p.frein_rapide ? "Frein rapide actif : LQQ limité à 50 % (pas une sortie complète). Il se lève quand l'indice revient à moins de 5 % de ce plus haut." : "Frein rapide inactif (il se déclenche au-delà de −10 %).", p.frein_rapide);
+    why(w, "Krach (−20 % sur 12 mois et sous la moyenne 200 séances)", p.frein_krach ? "oui" : "non",
+      p.frein_krach ? "Frein de krach : LQQ à 0 %." : "Pas de frein de krach.", p.frein_krach);
+
+    const lim = [];
+    if (pal < 1) lim.push("le marché est agité (volatilité " + pct(p.vol7) + ")");
+    if (p.frein_rapide) lim.push("le Nasdaq-100 est " + pct(-p.ecart_haut20) + " sous son plus haut des 20 séances (frein rapide)");
+    $("pea-why-lead").textContent = p.frein_krach ? "Frein de krach : le Nasdaq-100 a chuté de plus de 20 % et passé sous sa moyenne 200 séances, donc 0 % de LQQ."
+      : lim.length ? "LQQ " + (p.part === 0 ? "à 0 %" : "limité à 50 %") + " parce que " + lim.join(" et ") + ". Le frein rapide ne fait pas tout vendre : il plafonne LQQ à 50 %."
+      : "Marché calme (volatilité " + pct(p.vol7) + ") et pas de forte baisse récente : 100 % de LQQ.";
+
+    // ce qui ferait changer
+    const nx = $("pea-next"); nx.textContent = "";
+    const h20 = p.cloture / (1 + p.ecart_haut20), haut = "≈ " + nf0.format(h20 * (1 - s.frein_rapide_fin)), bas = "≈ " + nf0.format(h20 * (1 - s.frein_rapide));
+    if (p.frein_krach) next(nx, "↑", "Fin du frein de krach dès que le Nasdaq-100 repasse au-dessus de sa moyenne 200 séances ou revient à moins de 20 % de son plus haut sur 12 mois.");
+    else {
+      if (p.part === 0.5) next(nx, "↑", "Remonter à 100 % : il faut à la fois une volatilité sous 30 % (aujourd'hui " + pct(p.vol7) + ")" +
+        (p.frein_rapide ? " et un Nasdaq-100 revenu à moins de 5 % de son plus haut des 20 séances, soit au-dessus de " + haut + " points (clôture : " + nf0.format(p.cloture) + ")." : "."));
+      if (p.part === 0) next(nx, "↑", "Remonter à 50 % : volatilité sous 50 % (aujourd'hui " + pct(p.vol7) + ").");
+      if (p.part === 1) next(nx, "↓", "Descendre à 50 % : volatilité au-dessus de 34 % (aujourd'hui " + pct(p.vol7) + "), ou clôture du Nasdaq-100 sous " + bas + " points (10 % sous son plus haut des 20 séances).");
+      if (p.part > 0) next(nx, "↓", "Descendre à 0 % : volatilité au-dessus de 60 %, ou frein de krach.");
+    }
+    next(nx, "•", "Tu reçois une notification le soir même si un ordre est à passer le lendemain.");
+    $("pea-next-lead").textContent = p.frein_krach ? "LQQ revient quand le frein de krach se lève (voir les seuils)."
+      : p.part === 0.5 ? "Retour à 100 % quand la volatilité passe sous 30 %" + (p.frein_rapide ? " et que le Nasdaq-100 remonte au-dessus de " + haut + " points" : "") + ". Passage à 0 % si la volatilité dépasse 60 %."
+      : p.part === 1 ? "Passage à 50 % si la volatilité dépasse 34 % ou si le Nasdaq-100 clôture sous " + bas + " points."
+      : "Retour à 50 % quand la volatilité passe sous 50 %.";
+  }
+
+  // ----------------------------------------------------------------- CTO
   function renderCto() {
-    const c = E.cto, s = c.seuils;
-    $("cto-lev").textContent = lev(c.levier);
-    $("cto-sub").textContent = Math.abs(c.levier - c.levier_veille) > 1e-9
-      ? "À changer " + jour(E.prochaine) + " juste avant la clôture (" + c.heure_ordre + ", heure de Paris), aujourd'hui " + lev(c.levier_veille) + "."
-      : "Inchangé. ETF managed futures : " + Math.round(s.part_mf * 100) + " % du compte.";
-    ind($("cto-ind"), [
-      ["S&P 500 à la clôture du " + jour(c.seance).replace(/^\S+ /, ""), nf0.format(c.cloture) + " (" + pct(c.variation, true) + ")"],
-      ["Volatilité 10 / 20 séances", pct(c.vol10) + " / " + pct(c.vol20), "Levier visé = 40 % ÷ la plus haute, plafonné à " + lev(s.plafond) + " : " + lev(c.levier_vise)],
-      ["Tendance (MM200)", c.tendance_haussiere ? "haussière" : "baissière", "Écart à la MM200 : " + pct(c.ecart_mm200, true) + ". Baissière sous −2 %, levier × 0,25 ; haussière au-dessus de +1 %", c.tendance_haussiere ? "pos" : "neg"],
-      ["Frein de krach", tag(c.frein_krach), "Levier 0 après 3 clôtures à plus de 14 % sous le plus haut sur 12 mois et sous la MM200"],
-      ["Coupe-circuit", tag(c.coupe_circuit), "Plus bas du jour : " + pct(c.plus_bas, true) + " (levier 1× au plus dès −5 %)"],
-      ["Le levier ne change que", "si l'écart dépasse 1×", "Levier visé " + lev(c.levier_vise) + ", levier retenu " + lev(c.levier)]
-    ]);
-    const V = +$("cto-v").value || 0, M = +$("cto-m").value || 0, n = $("cto-n").value === "" ? null : +$("cto-n").value, out = $("cto-out"); out.textContent = "";
-    if (V <= 0) { out.append(el("div", "Saisis la valeur de ton compte pour voir le nombre de contrats.", "empty")); return; }
-    const parMes = c.es * c.mes_point_usd / c.eurusd;            // valeur d'un MES en euros
-    const N = Math.round(c.levier * V / parMes), N1 = Math.round(V / parMes);
-    const l1 = el("div"); l1.append(document.createTextNode("Contrats MES visés : ")); l1.append(el("b", nf0.format(N)));
-    l1.append(document.createTextNode(" (1 MES ≈ " + eur.format(parMes) + ", ES à " + nf0.format(c.es) + ", 1 € = " + nf4.format(c.eurusd) + " $)"));
-    out.append(l1);
-    if (n !== null) {
-      const d = N - n;
-      out.append(el("div", d === 0 ? "Tu as le bon nombre de contrats." : (d > 0 ? "Acheter " : "Vendre ") + nf0.format(Math.abs(d)) + " MES" + (Math.abs(c.levier - c.levier_veille) > 1e-9 ? ", " + jour(E.prochaine) + " juste avant la clôture." : " (le compte a bougé depuis le dernier ajustement).")));
+    const c = E.cto, s = c.seuils, k = ctoCalc();
+    $("cto-big").textContent = lev(c.levier);
+    $("cto-chg").textContent = changeC() ? "à partir de " + jour(E.prochaine) + " (aujourd'hui " + lev(c.levier_veille) + ")" : "";
+    const bar = $("cto-bar"); bar.textContent = "";
+    { const i = el("i"); i.style.width = s.part_mf * 100 + "%"; i.style.background = "var(--mf)"; bar.append(i); const j = el("i"); j.style.flex = "1"; j.style.background = "var(--rest)"; bar.append(j); }
+    const lg = $("cto-legend"); lg.textContent = "";
+    const item = (color, txt) => { const sp = el("span"); const sw = el("i", null, "sw"); sw.style.background = color; sp.append(sw, document.createTextNode(txt)); lg.append(sp); };
+    item("var(--mf)", "ETF managed futures " + pct0(s.part_mf) + (k.V ? " · " + eur(k.V * s.part_mf) : ""));
+    item("var(--rest)", "Liquidités (marge) " + pct0(1 - s.part_mf) + (k.V ? " · " + eur(k.V * (1 - s.part_mf)) : ""));
+    const maxT = 4;
+    $("cto-expo").style.width = Math.min(1, c.levier / maxT) * 100 + "%";
+    $("cto-100").style.left = "calc(" + (100 / maxT) + "% - 1px)";
+    const cap = $("cto-expo-cap"); cap.textContent = "Exposition au S&P 500 : "; cap.append(el("b", pct0(c.levier) + " du compte" + (k.V ? " = " + k.N + " MES" : "")));
+    $("cto-expo-txt").textContent = "Les futures portent sur la valeur totale du compte" + (k.V ? " : " + nf1.format(c.levier) + " × " + eur(k.V) + " = " + eur(c.levier * k.V) + " d'exposition" : "") + ". Le trait marque 100 %, l'échelle va jusqu'à 4×.";
+
+    // mes chiffres
+    const ck = $("cto-checks"); ck.textContent = "";
+    if (!k.V) ck.append(check("info", "Saisis la valeur de ton compte", "pour avoir le nombre de contrats MES et l'ordre de protection."));
+    else {
+      const ex = "Nombre exact : " + nf1.format(k.exact) + " (1 MES ≈ " + eur(k.parMes) + ", ES à " + nf0.format(c.es) + ").";
+      if (k.n == null) ck.append(check("info", "Cible : " + k.N + " MES", ex + " Saisis tes contrats détenus pour vérifier."));
+      else if (changeC()) ck.append(check("todo", (k.N >= k.n ? "Acheter " : "Vendre ") + Math.abs(k.N - k.n) + " MES " + jour(E.prochaine) + " pour finir à " + k.N, ex + " Juste avant la clôture américaine (" + c.heure_ordre + ")."));
+      else if (Math.abs(k.n - k.exact) < 1) ck.append(check("ok", "Tes futures sont bons : " + k.n + " MES", ex + " On n'ajuste que si l'écart atteint 1 contrat."));
+      else ck.append(check("todo", (k.N > k.n ? "Acheter " : "Vendre ") + Math.abs(k.N - k.n) + " MES pour revenir à " + k.N, ex + " L'écart atteint 1 contrat (la valeur du compte ou le cours a bougé) : ajuste juste avant la clôture américaine."));
+      if (k.M != null) {
+        const sh = k.M / k.V, cash = k.V - k.M, cible = k.V * s.part_mf;
+        if (cash < 0.1 * k.V) ck.append(check("todo", "Vendre " + eur(k.M - cible) + " d'ETF managed futures", "Les liquidités sont sous 10 % du compte : retour à " + pct0(s.part_mf) + "."));
+        else if (Math.abs(sh - s.part_mf) > 0.2) ck.append(check("todo", (cible > k.M ? "Acheter " : "Vendre ") + eur(Math.abs(cible - k.M)) + " d'ETF managed futures", "Tu es à " + pct0(sh) + " pour une cible de " + pct0(s.part_mf) + " : aligne-toi."));
+        else ck.append(check("ok", "ETF managed futures bon : " + pct0(sh) + " du compte", "Retour à " + pct0(s.part_mf) + " le 1er janvier, ou si les liquidités passent sous 10 %."));
+      }
+      const held = k.n != null && !changeC() && Math.abs(k.n - k.exact) < 1 ? k.n : k.N, K = held - k.N1;
+      ck.append(K > 0
+        ? check("info", "Protection −5 % : vendre " + K + " MES sur tes " + held, "Ordre conditionnel à laisser en place chez IBKR : vente au marché de " + K + " MES si la variation du jour de l'ES atteint −5 %. À défaut, un stop vendeur sur " + K + " MES vers " + nf0.format(c.es * 0.95) + " points, à remettre à jour chaque jour. Il ramène le levier à 1×.")
+        : check("info", "Pas d'ordre de protection nécessaire", "Le levier ne dépasse pas 1×."));
     }
-    const K = N - N1;
-    out.append(el("div", K > 0
-      ? "Ordre conditionnel à laisser en place chez IBKR : vendre " + nf0.format(K) + " MES au marché si la variation du jour du contrat ES atteint −5 % (condition « variation en % » des ordres conditionnels de TWS). À défaut, un stop vendeur sur " + nf0.format(K) + " MES à " + nf0.format(c.es * 0.95) + " points, à remettre à jour chaque jour."
-      : "Pas d'ordre conditionnel nécessaire : le levier visé ne dépasse pas 1×."));
-    const cibleM = V * s.part_mf, cash = V - M;
-    if (M > 0) {
-      out.append(el("div", cash < 0.1 * V
-        ? "Cash sous 10 % du compte : vendre " + eur.format(Math.max(0, M - cibleM)) + " d'ETF managed futures pour revenir à " + Math.round(s.part_mf * 100) + " %."
-        : "ETF managed futures : " + eur.format(M) + " pour une cible de " + eur.format(cibleM) + " (rééquilibrage le 1er janvier, ou si le cash passe sous 10 %)."));
+
+    // pourquoi
+    $("cto-why-title").textContent = "Pourquoi " + lev(c.levier) + " ?";
+    const w = $("cto-why"); w.textContent = "";
+    const vmax = Math.max(c.vol10, c.vol20);
+    why(w, "Agitation du S&P 500 (la plus forte volatilité sur 10 et 20 séances)", pct(vmax),
+      "Levier calculé = 40 % ÷ " + pct(vmax) + (c.tendance_haussiere ? "" : " ÷ 4") + " = " + lev2(c.levier_vise) + (40 / (vmax * 100) > s.plafond ? " (plafonné à 4×)" : "") + ".", false);
+    why(w, "Tendance (écart à la moyenne 200 séances)", pct(c.ecart_mm200, true),
+      c.tendance_haussiere ? "Tendance haussière : pas de réduction." : "Tendance baissière : levier calculé divisé par 4.", !c.tendance_haussiere);
+    why(w, "Krach (−14 % sur 12 mois et sous la moyenne 200 séances)", c.frein_krach ? "oui" : "non", c.frein_krach ? "Frein de krach : levier 0." : "Pas de frein de krach.", c.frein_krach);
+    gauge(c);
+    $("cto-why-lead").textContent = c.frein_krach ? "Frein de krach : le S&P 500 a chuté de plus de 14 % et passé sous sa moyenne 200 séances, donc levier 0."
+      : "Ce soir, le levier calculé vaut " + lev2(c.levier_vise) + " (40 % ÷ volatilité de " + pct(vmax) + (c.tendance_haussiere ? "" : ", divisé par 4 car le S&P 500 est sous sa moyenne 200 séances") + "). " +
+        (changeC() ? "Il est sorti de la zone de maintien : la stratégie passe à " + lev(c.levier) + "." : "Il reste à moins de 1 de " + lev(c.levier) + " : la stratégie garde " + lev(c.levier) + ".");
+
+    // ce qui ferait changer
+    const nx = $("cto-next"); nx.textContent = "";
+    const L = c.levier, f = c.tendance_haussiere ? 1 : s.tendance_baissiere, cible = s.cible * f;
+    if (c.frein_krach) next(nx, "↑", "Fin du frein de krach dès que le S&P 500 repasse au-dessus de sa moyenne 200 séances ou revient à moins de 14 % de son plus haut sur 12 mois.");
+    else {
+      if (L + s.ecart_min < s.plafond * f) next(nx, "↑", "Levier en hausse si la volatilité passe sous " + pct(cible / (L + s.ecart_min)) + " (aujourd'hui " + pct(vmax) + ") : levier calculé au-dessus de " + lev(L + s.ecart_min) + ".");
+      if (L - s.ecart_min > 0) next(nx, "↓", "Levier en baisse si la volatilité dépasse " + pct(cible / (L - s.ecart_min)) + " : levier calculé sous " + lev(L - s.ecart_min) + ".");
+      if (c.tendance_haussiere) {
+        const q = c.levier_vise * s.tendance_baissiere, niveau = c.mm200 * (1 + s.sortie_tendance);
+        next(nx, "↓", "Si le S&P 500 clôture sous ≈ " + nf0.format(niveau) + " points (2 % sous sa moyenne 200 séances ; clôture : " + nf0.format(c.cloture) + "), le levier calculé est divisé par 4 (≈ " + lev(q) + ")" +
+          (Math.abs(q - L) > s.ecart_min ? " et le levier retenu suit." : ", mais l'écart reste sous 1 : le levier retenu ne bouge pas."));
+      } else {
+        next(nx, "↑", "Si le S&P 500 clôture au-dessus de ≈ " + nf0.format(c.mm200 * (1 + s.retour_tendance)) + " points (1 % au-dessus de sa moyenne 200 séances), fin de la division par 4 : levier calculé ≈ " + lev(c.levier_vise / s.tendance_baissiere) + ".");
+      }
+      next(nx, "↓", "Krach : levier 0 après 3 clôtures à plus de 14 % sous le plus haut sur 12 mois et sous la moyenne 200 séances.");
     }
+    next(nx, "•", "Pendant la séance, si le S&P 500 touche −5 % : l'ordre conditionnel ramène à 1× et tu reçois une alerte.");
   }
 
-  function step(svg, rows, key, max, color, fmt) {
-    const W = svg.clientWidth || 480, Hh = 150, pad = 42; svg.setAttribute("viewBox", "0 0 " + W + " " + Hh); svg.textContent = "";
-    const ns = "http://www.w3.org/2000/svg", mk = (t, a) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
-    if (!rows || rows.length < 2) return;
-    const n = rows.length, x = i => pad + (W - pad - 6) * i / (n - 1), y = v => 8 + (Hh - 30) * (1 - v / max);
-    for (const g of [0, max / 2, max]) {
-      svg.append(mk("line", { x1: pad, x2: W - 6, y1: y(g), y2: y(g), stroke: css("--line"), "stroke-width": 1 }));
-      const t = mk("text", { x: pad - 4, y: y(g) + 4, "text-anchor": "end", "font-size": 10, fill: css("--muted") }); t.textContent = fmt(g); svg.append(t);
-    }
-    let d = "M" + x(0) + " " + y(rows[0][key]);
-    for (let i = 1; i < n; i++) d += "H" + x(i).toFixed(1) + "V" + y(rows[i][key]).toFixed(1);
-    svg.append(mk("path", { d, fill: "none", stroke: color, "stroke-width": 2 }));
-    for (const frac of [0, 0.5, 1]) {
-      const i = Math.round(frac * (n - 1)), t = mk("text", { x: x(i), y: Hh - 4, "text-anchor": frac === 0 ? "start" : frac === 1 ? "end" : "middle", "font-size": 10, fill: css("--muted") });
-      t.textContent = new Date(rows[i].d + "T00:00:00Z").toLocaleDateString("fr-FR", { month: "short", year: "numeric", timeZone: "UTC" }); svg.append(t);
-    }
+  function gauge(c) {
+    const svg = $("cto-gauge"), W = svg.clientWidth || 340, H = 86, padL = 14, padR = 14, max = 4;
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.textContent = "";
+    const ns = "http://www.w3.org/2000/svg", mk = (t, a, txt) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.append(e); return e; };
+    const x = v => padL + (W - padL - padR) * Math.max(0, Math.min(max, v)) / max, y = 44;
+    const L = c.levier, V = c.levier_vise, lo = Math.max(0, L - 1), hi = Math.min(max, L + 1);
+    mk("rect", { x: x(0), y: y - 5, width: x(max) - x(0), height: 10, rx: 5, fill: css("--surface-2"), stroke: css("--line") });
+    mk("rect", { x: x(lo), y: y - 5, width: Math.max(2, x(hi) - x(lo)), height: 10, rx: 5, fill: css("--accent-soft") });
+    for (let t = 0; t <= max; t++) mk("text", { x: x(t), y: H - 4, "text-anchor": t === 0 ? "start" : t === max ? "end" : "middle", "font-size": 11, fill: css("--muted") }, t + "×");
+    // levier retenu : trait + étiquette au-dessus
+    mk("rect", { x: x(L) - 2, y: y - 12, width: 4, height: 24, rx: 2, fill: css("--accent") });
+    const a = mk("text", { x: x(L), y: 14, "text-anchor": x(L) < 70 ? "start" : x(L) > W - 70 ? "end" : "middle", "font-size": 12, "font-weight": 600, fill: css("--fg") }, "retenu " + lev(L));
+    // levier calculé : point + étiquette en dessous
+    mk("circle", { cx: x(V), cy: y, r: 5, fill: css("--surface"), stroke: css("--fg"), "stroke-width": 2 });
+    mk("text", { x: x(V), y: y + 22, "text-anchor": x(V) < 70 ? "start" : x(V) > W - 70 ? "end" : "middle", "font-size": 12, fill: css("--fg-2") }, "calculé " + lev2(V));
+    const s = c.seuils, f = c.tendance_haussiere ? 1 : s.tendance_baissiere, vUp = s.cible * f / (L + s.ecart_min), vDn = L - s.ecart_min > 0 ? s.cible * f / (L - s.ecart_min) : null;
+    $("cto-gauge-txt").textContent = "La stratégie garde " + lev(L) + " tant que le levier calculé reste dans la zone bleue (" + lev(lo) + " à " + lev(hi) + ")" +
+      (c.frein_krach ? "." : ", c'est-à-dire tant que la volatilité reste entre " + pct(vUp) + (vDn ? " et " + pct(vDn) : " et plus") + " (aujourd'hui " + pct(Math.max(c.vol10, c.vol20)) + ")" +
+      (c.tendance_haussiere ? " et que le S&P 500 ne clôture pas sous ≈ " + nf0.format(c.mm200 * (1 + s.sortie_tendance)) + " points" : "") + ".") +
+      " S'il en sort, elle passe au levier calculé du jour et tu reçois une notification. Ton nombre de contrats doit, lui, toujours correspondre au levier retenu.";
   }
 
-  function render() {
-    if (!E) return;
-    const maj = new Date(E.maj);
-    $("maj").textContent = "Séance du " + jour(E.seance) + " · calculé le " + maj.toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }) + " · prochaine séance : " + jour(E.prochaine);
-    const b = $("banner"), todo = E.actions.concat(E.alertes); b.textContent = "";
-    b.className = "banner " + (todo.length ? "todo" : "ok");
-    b.append(el("h2", todo.length ? "À faire " + jour(E.prochaine) : "Rien à faire " + jour(E.prochaine)));
-    if (todo.length) { const ul = el("ul"); for (const a of todo) { const li = el("li"); li.append(el("b", a.titre + " : ")); li.append(document.createTextNode(a.texte)); ul.append(li); } b.append(ul); }
-    else b.append(el("div", "Les deux stratégies gardent leur composition. Pense seulement à garder l'ordre conditionnel en place sur les futures."));
-    renderPea(); renderCto();
-    if (H) {
-      step($("ch-pea"), H.pea, "part", 1, css("--pea"), v => Math.round(v * 100) + " %");
-      step($("ch-cto"), H.cto, "lev", 4, css("--cto"), v => nf1.format(v) + "×");
-    }
-    const j = $("journal"); j.textContent = "";
-    if (!E.journal.length) j.append(el("li", "Aucune notification pour l'instant.", "empty"));
-    for (const a of E.journal) { const li = el("li"); li.append(el("time", "Séance du " + jour(a.seance))); li.append(el("div", a.titre)); li.append(el("div", a.texte, "sub")); j.append(li); }
+  function check(kind, title, sub) {
+    const li = el("li"), m = el("span", kind === "ok" ? "✓" : kind === "todo" ? "!" : "i", "mark " + kind), d = el("div");
+    m.setAttribute("aria-hidden", "true");
+    d.append(el("b", title)); if (sub) d.append(el("small", sub)); li.append(m, d); return li;
   }
+  function why(ul, k, v, e, limiting) {
+    const li = el("li"); li.append(el("span", k, "k"), el("span", v, "v"), el("span", e, "e" + (limiting ? " lim" : ""))); ul.append(li);
+  }
+  function next(ul, arrow, txt) { const li = el("li"); li.append(el("span", arrow, "arr"), el("span", txt)); ul.append(li); }
+
+  // ----------------------------------------------------------------- graphiques
+  const charts = {};
+  let years = 5;
+  function chartOptions() {
+    return {
+      autoSize: true,
+      layout: { background: { type: "solid", color: css("--surface") }, textColor: css("--muted"), fontFamily: css("--font"), fontSize: 11,
+        attributionLogo: false, panes: { separatorColor: css("--line"), separatorHoverColor: css("--line"), enableResize: false } },
+      grid: { vertLines: { visible: false }, horzLines: { color: css("--line") } },
+      rightPriceScale: { borderVisible: false },
+      timeScale: { visible: false, borderVisible: false, minBarSpacing: 0.0005, fixLeftEdge: true, fixRightEdge: true, lockVisibleTimeRangeOnResize: true },
+      crosshair: { mode: 0, vertLine: { color: css("--muted"), labelVisible: false }, horzLine: { color: css("--muted"), labelVisible: false } },
+      handleScroll: { mouseWheel: false, vertTouchDrag: false, pressedMouseMove: true, horzTouchDrag: true },
+      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: false, axisDoubleClickReset: false },
+      localization: { locale: "fr-FR" }
+    };
+  }
+  // repères horizontaux des volets du bas, avec étiquette discrète dans l'échelle
+  const guide = (price, label = true) => ({ price, color: css("--line"), lineWidth: 1, lineStyle: 1, axisLabelVisible: label,
+    axisLabelColor: css("--surface"), axisLabelTextColor: css("--muted") });
+  const xColor = p => p >= 1 ? css("--x100") : p > 0 ? css("--x50") : css("--x0");
+
+  function buildCharts() {
+    if (!window.LightweightCharts || !H) { $("ch-pea").append(el("p", "Graphiques indisponibles (pas de connexion ?).", "empty")); return; }
+    const LC = window.LightweightCharts;
+    for (const key of ["pea", "cto"]) { if (charts[key]) { charts[key].chart.remove(); } }
+    // PEA
+    {
+      const h = H.pea, chart = LC.createChart($("ch-pea"), chartOptions());
+      const price = chart.addSeries(LC.LineSeries, { lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerRadius: 4, priceFormat: { type: "custom", formatter: v => nf0.format(v), minMove: 0.01 } }, 0);
+      price.priceScale().applyOptions({ mode: 1, scaleMargins: { top: 0.1, bottom: 0.05 } });
+      price.setData(h.d.map((d, i) => ({ time: d, value: h.c[i], color: xColor(h.p[i]) })));
+      const expo = chart.addSeries(LC.AreaSeries, { lineType: 1, lineWidth: 2, lineColor: css("--accent"), topColor: css("--accent-soft"), bottomColor: css("--accent-soft"),
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        priceFormat: { type: "custom", minMove: 0.01, formatter: v => Math.abs(v * 2 - Math.round(v * 2)) < 1e-6 && v > -1e-6 && v < 1 + 1e-6 ? nf0.format(v * 100) + "\u00a0%" : "" },
+        autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 1 }, margins: { above: 12, below: 6 } }) }, 1);
+      expo.setData(h.d.map((d, i) => ({ time: d, value: h.p[i] })));
+      expo.priceScale().applyOptions({ mode: 0, scaleMargins: { top: 0, bottom: 0 } });
+      for (const v of [0.5, 1]) expo.createPriceLine(guide(v));
+      chart.panes()[1].setStretchFactor(0.42); chart.panes()[0].setStretchFactor(1);
+      charts.pea = { chart, price, expo, h, key: "pea" };
+    }
+    // CTO
+    {
+      const h = H.cto, chart = LC.createChart($("ch-cto"), chartOptions());
+      const price = chart.addSeries(LC.LineSeries, { lineWidth: 2, color: css("--price"), priceLineVisible: false, lastValueVisible: false, crosshairMarkerRadius: 4, priceFormat: { type: "custom", formatter: v => nf0.format(v), minMove: 0.01 } }, 0);
+      price.priceScale().applyOptions({ mode: 1, scaleMargins: { top: 0.1, bottom: 0.05 } });
+      price.setData(h.d.map((d, i) => ({ time: d, value: h.c[i] })));
+      const fmt = { type: "custom", minMove: 0.01, formatter: v => Math.abs(v - Math.round(v)) < 1e-6 && v > -1e-6 && v < 4 + 1e-6 ? nf0.format(v) + "×" : "" };
+      const held = chart.addSeries(LC.AreaSeries, { lineType: 1, lineWidth: 2, lineColor: css("--accent"), topColor: css("--accent-soft"), bottomColor: css("--accent-soft"),
+        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, priceFormat: fmt,
+        autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 4 }, margins: { above: 12, below: 6 } }) }, 1);
+      held.setData(h.d.map((d, i) => ({ time: d, value: h.l[i] })));
+      const calc = chart.addSeries(LC.LineSeries, { lineWidth: 1, lineStyle: 2, color: css("--calc"), priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, priceFormat: fmt,
+        autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 4 }, margins: { above: 12, below: 6 } }) }, 1);
+      calc.setData(h.d.map((d, i) => ({ time: d, value: h.v[i] })));
+      held.priceScale().applyOptions({ mode: 0, scaleMargins: { top: 0, bottom: 0 } });
+      for (const v of [1, 2, 3, 4]) held.createPriceLine(guide(v, v === 1 || v === 4));
+      chart.panes()[1].setStretchFactor(0.48); chart.panes()[0].setStretchFactor(1);
+      charts.cto = { chart, price, held, calc, h, key: "cto" };
+    }
+    for (const k of ["pea", "cto"]) {
+      const C = charts[k];
+      C.chart.subscribeCrosshairMove(param => readout(C, param && param.time ? param.time : null));
+      C.chart.timeScale().subscribeVisibleTimeRangeChange(() => stats(C));
+    }
+    setPeriod(years);
+  }
+
+  const idxOf = (h, t) => { // indice de la date t (chaîne aaaa-mm-jj ou objet) dans h.d
+    const s = typeof t === "string" ? t : t.year + "-" + String(t.month).padStart(2, "0") + "-" + String(t.day).padStart(2, "0");
+    let lo = 0, hi = h.d.length - 1;
+    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (h.d[m] <= s) lo = m; else hi = m - 1; }
+    return lo;
+  };
+  function readout(C, t) {
+    const h = C.h, i = t == null ? h.d.length - 1 : idxOf(h, t), ro = $("ro-" + C.key); ro.textContent = "";
+    ro.append(el("span", court(h.d[i]) + " · "));
+    if (C.key === "pea") {
+      ro.append(el("b", "Nasdaq-100 " + nf0.format(h.c[i]))); ro.append(el("span", " · part de LQQ ")); ro.append(el("b", pct0(h.p[i])));
+    } else {
+      ro.append(el("b", "S&P 500 " + nf0.format(h.c[i]))); ro.append(el("span", " · levier retenu ")); ro.append(el("b", lev(h.l[i]))); ro.append(el("span", " · calculé " + lev2(h.v[i])));
+    }
+  }
+  function visibleIdx(C) {
+    const r = C.chart.timeScale().getVisibleRange(), h = C.h;
+    if (!r) return [0, h.d.length - 1];
+    return [idxOf(h, r.from), idxOf(h, r.to)];
+  }
+  const dMois = new Intl.DateTimeFormat("fr-FR", { month: "short", year: "numeric", timeZone: "UTC" });
+  function xaxis(C) {
+    const h = C.h, [a, b] = visibleIdx(C), sp = $("xa-" + C.key).children;
+    const longue = (iso2date(h.d[b]) - iso2date(h.d[a])) / (365.25 * 864e5) > 6, f = i => longue ? h.d[i].slice(0, 4) : dMois.format(iso2date(h.d[i]));
+    sp[0].textContent = f(a); sp[1].textContent = f(Math.round((a + b) / 2)); sp[2].textContent = f(b);
+  }
+  function stats(C) {
+    xaxis(C);
+    const h = C.h, [a, b] = visibleIdx(C), n = b - a + 1, yrs = Math.max(1 / 12, (iso2date(h.d[b]) - iso2date(h.d[a])) / (365.25 * 864e5)), st = $("st-" + C.key);
+    if (n < 2) { st.textContent = ""; return; }
+    let ch = 0;
+    if (C.key === "pea") {
+      const t = { 1: 0, 0.5: 0, 0: 0 };
+      for (let i = a; i <= b; i++) { t[h.p[i]] = (t[h.p[i]] || 0) + 1; if (i > a && h.p[i] !== h.p[i - 1]) ch++; }
+      st.textContent = "Sur la période affichée : " + ch + " changement" + (ch > 1 ? "s" : "") + " (≈ " + nf1.format(ch / yrs) + " par an) · temps passé à 100 % : " + pct0(t[1] / n) + ", à 50 % : " + pct0(t[0.5] / n) + ", à 0 % : " + pct0(t[0] / n) + ".";
+    } else {
+      let s = 0;
+      for (let i = a; i <= b; i++) { s += h.l[i]; if (i > a && h.l[i] !== h.l[i - 1]) ch++; }
+      st.textContent = "Sur la période affichée : " + ch + " changement" + (ch > 1 ? "s" : "") + " de levier (≈ " + nf1.format(ch / yrs) + " par an) · levier moyen " + lev(s / n) + ".";
+    }
+  }
+  function setPeriod(y) {
+    years = y;
+    for (const b of document.querySelectorAll("#periods button")) b.setAttribute("aria-pressed", String(+b.dataset.y === y));
+    store.set("suivi-periode", String(y));
+    for (const k of ["pea", "cto"]) {
+      const C = charts[k]; if (!C) continue;
+      const h = C.h, last = h.d[h.d.length - 1];
+      let from = h.d[0];
+      if (y > 0) { const d = iso2date(last); d.setUTCFullYear(d.getUTCFullYear() - y); const f = d.toISOString().slice(0, 10); if (f > from) from = f; }
+      C.chart.timeScale().setVisibleRange({ from, to: last });
+      readout(C, null); stats(C);
+    }
+  }
+  for (const b of document.querySelectorAll("#periods button")) b.addEventListener("click", () => setPeriod(+b.dataset.y));
+
+  // ----------------------------------------------------------------- derniers changements
+  let showAll = false;
+  function renderChanges() {
+    const ul = $("changes"); ul.textContent = "";
+    if (!H) { ul.append(el("li", "Historique indisponible.", "empty")); return; }
+    const out = [];
+    const nextDate = (h, i) => i + 1 < h.d.length ? h.d[i + 1] : E.prochaine;   // l'ordre se passe à la séance suivante
+    { const h = H.pea; for (let i = h.d.length - 1; i > 0 && out.length < 400; i--) if (h.p[i] !== h.p[i - 1]) out.push({ d: nextDate(h, i), acct: "PEA", txt: "LQQ " + pct0(h.p[i - 1]) + " → " + pct0(h.p[i]) }); }
+    { const h = H.cto; let c = 0; for (let i = h.d.length - 1; i > 0 && c < 400; i--) if (h.l[i] !== h.l[i - 1]) { out.push({ d: nextDate(h, i), acct: "CTO", txt: "Levier " + lev(h.l[i - 1]) + " → " + lev(h.l[i]) }); c++; } }
+    out.sort((x, y) => x.d < y.d ? 1 : x.d > y.d ? -1 : 0);
+    const list = out.slice(0, showAll ? 40 : 8);
+    for (const o of list) {
+      const li = el("li"), t = el("time", court(o.d)), d = el("div");
+      d.append(el("span", o.acct, "acct"), document.createTextNode(o.txt)); li.append(t, d); ul.append(li);
+    }
+    $("more").hidden = out.length <= 8;
+    $("more").textContent = showAll ? "Afficher moins" : "Afficher plus";
+  }
+  $("more").addEventListener("click", () => { showAll = !showAll; renderChanges(); });
+
+  // ----------------------------------------------------------------- rendu
+  function renderHeader() {
+    const maj = new Date(E.maj), age = (Date.now() - maj) / 864e5;
+    const m = $("maj"); m.textContent = "Clôture du " + jour(E.seance) + " · calculé le " + maj.toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).replace(":", " h ");
+    if (age > 4) { m.append(" · "); m.append(el("span", "dernier calcul ancien : regarde l'onglet Actions de GitHub", "stale")); }
+  }
+  function renderAll() { if (!E) return; renderHeader(); renderToday(); renderPea(); renderCto(); }
 
   for (const id of ["pea-v", "pea-l", "cto-v", "cto-m", "cto-n"]) {
     const inp = $(id), v = store.get("suivi-" + id); if (v !== null) inp.value = v;
-    inp.addEventListener("input", () => { store.set("suivi-" + id, inp.value); render(); });
+    inp.addEventListener("input", () => { store.set("suivi-" + id, inp.value); renderAll(); });
   }
-  if (window.matchMedia) { const mq = window.matchMedia("(prefers-color-scheme: dark)"); (mq.addEventListener ? mq.addEventListener("change", render) : mq.addListener(render)); }
-  window.addEventListener("resize", () => { clearTimeout(window.__rz); window.__rz = setTimeout(render, 150); });
+  { const y = store.get("suivi-periode"); if (y !== null && [0, 1, 5, 10, 20].includes(+y)) years = +y; }
+  const rethemes = () => { renderAll(); if (H) buildCharts(); };
+  if (window.matchMedia) { const mq = window.matchMedia("(prefers-color-scheme: dark)"); mq.addEventListener ? mq.addEventListener("change", rethemes) : mq.addListener(rethemes); }
+  let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => E && gauge(E.cto), 150); });
 
   const nocache = "?t=" + Date.now();
-  Promise.all([fetch("etat.json" + nocache).then(r => r.ok ? r.json() : null), fetch("historique.json" + nocache).then(r => r.ok ? r.json() : null).catch(() => null)])
-    .then(([e, h]) => {
-      if (!e) throw new Error("absent");
-      E = e; H = h; render();
+  fetch("etat.json" + nocache).then(r => { if (!r.ok) throw new Error("absent"); return r.json(); })
+    .then(e => {
+      E = e; renderAll();
+      return fetch("historique.json" + nocache).then(r => r.ok ? r.json() : null).catch(() => null);
     })
+    .then(h => { if (!E) return; H = h; buildCharts(); renderChanges(); })
     .catch(() => {
       $("maj").textContent = "Pas encore de données : lance une première fois le calcul (onglet Actions de GitHub, « Signaux », « Run workflow »).";
-      $("banner").className = "banner"; $("banner").textContent = "";
+      $("today").textContent = "";
     });
 })();
 </script>
