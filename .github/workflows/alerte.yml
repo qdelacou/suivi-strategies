@@ -1,0 +1,46 @@
+name: Alerte -5 %
+
+# Toutes les 5 minutes, du lundi au vendredi, de 14 h à 23 h environ (heure de Paris).
+# Le programme ne regarde les cours que pendant la séance américaine (9 h 30 – 16 h à New York)
+# et n'envoie qu'une notification par jour. GitHub peut retarder ces lancements de quelques minutes.
+on:
+  schedule:
+    - cron: "*/5 13-21 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      test_notification:
+        description: "Envoyer un exemple d'alerte"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: alerte
+  cancel-in-progress: false
+
+jobs:
+  alerte:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Surveillance du S&P 500
+        run: python alerte.py ${{ inputs.test_notification && '--test-notification' || '' }}
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SITE_URL: ${{ vars.SITE_URL }}
+      - name: Mémoriser l'alerte du jour
+        run: |
+          if [ -f alerte.json ]; then
+            git config user.name "suivi-strategies"
+            git config user.email "suivi-strategies@users.noreply.github.com"
+            git add alerte.json
+            git diff --cached --quiet || (git commit -m "Alerte du $(date -u +%F)" && git pull --rebase && git push)
+          fi
