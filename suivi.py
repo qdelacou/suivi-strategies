@@ -19,6 +19,7 @@ NY, PARIS = ZoneInfo("America/New_York"), ZoneInfo("Europe/Paris")
 ICI = os.path.dirname(os.path.abspath(__file__))
 ETAT = os.path.join(ICI, "etat.json")
 HISTO = os.path.join(ICI, "historique.json")
+PORTEF = os.path.join(ICI, "portefeuille.json")
 # Coupe-circuit du PEA : dans le simulateur Nasdaq, il ne sert que s'il est exécuté au cours de clôture du jour
 # de la baisse. La notification arrivant après la fermeture d'Euronext, il ne pourrait être appliqué que le
 # lendemain, et rejoué ainsi il n'apporte rien (1986-2026 : 26,4 % par an et −60 % de pire baisse, comme sans
@@ -56,6 +57,77 @@ def sans_seance_en_cours(barres, maintenant):
     if barres and barres[-1]["d"] == ny.date().isoformat() and ny.time() < time(16, 20):
         return barres[:-1]
     return barres
+
+
+# ---------------------------------------------------------------- portefeuille simulé (site : comptes fictifs depuis une date de départ)
+DEBUT_PF = "2025-01-01"
+# taux de la facilité de dépôt de la BCE (date d'effet, %), pour les liquidités et l'ETF monétaire (€STR ≈ taux − 0,10)
+TAUX_BCE = [["2024-12-18", 3.00], ["2025-02-05", 2.75], ["2025-03-12", 2.50], ["2025-04-23", 2.25], ["2025-06-11", 2.00],
+            ["2026-06-17", 2.25], ["2026-09-16", 2.50]]
+# ETF managed futures retenu : iMGP DBi Managed Futures, part couverte en euros (MFEH, LU3359622902) ; DBMF à défaut
+TICKERS_PF = {"lqq": ["LQQ.PA"], "mf": ["MFEH.PA", "MFEH.DE", "DBMF"], "tr": ["^SP500TR"], "irx": ["^IRX"], "es": ["ES=F"], "fx": ["EURUSD=X"]}
+
+
+def charger_portefeuille(maintenant):
+    """Cours quotidiens depuis DEBUT_PF des titres de la simulation. Rend {clé: (ticker, [(date, clôture)])}."""
+    import yfinance as yf
+    out = {}
+    for cle, liste in TICKERS_PF.items():
+        out[cle] = (None, [])
+        for tk in liste:
+            serie = []
+            for _ in range(3):
+                try:
+                    df = yf.Ticker(tk).history(start=DEBUT_PF, interval="1d", auto_adjust=False)
+                    serie = [(ix.date().isoformat(), float(r.Close)) for ix, r in df.iterrows() if r.Close == r.Close and r.Close > 0]
+                    break
+                except Exception as e:
+                    print("Yahoo", tk, e)
+            if len(serie) > 5:
+                out[cle] = (tk, serie)
+                break
+            print("Pas de cours pour", tk)
+    # Euronext : la séance du jour n'est retenue qu'une fois close
+    p = maintenant.astimezone(PARIS)
+    for cle in ("lqq", "mf"):
+        tk, serie = out[cle]
+        if serie and tk and tk.endswith((".PA", ".DE")) and serie[-1][0] == p.date().isoformat() and p.time() < time(17, 40):
+            out[cle] = (tk, serie[:-1])
+    return out
+
+
+def construire_portefeuille(series, pf, sp, sc):
+    """Données compactes pour la simulation faite par le site (date de départ et montants modifiables)."""
+    ndx, spx = series["ndx"], series["spx"]
+    part = {b["d"]: s["part"] for b, s in zip(ndx, sp)}
+
+    def suivre(serie, dates, defaut=None):
+        """Dernière valeur connue à chaque date (les jours fériés d'un marché reprennent la veille)."""
+        out, j, der = [], 0, defaut
+        for d in dates:
+            while j < len(serie) and serie[j][0] <= d:
+                der = serie[j][1]
+                j += 1
+            out.append(der)
+        return out
+
+    idx = [k for k, b in enumerate(spx) if b["d"] >= DEBUT_PF]
+    d = [spx[k]["d"] for k in idx]
+    if not d or not pf["lqq"][1]:
+        return dict(erreur="cours indisponibles")
+    c = [spx[k]["c"] for k in idx]
+    tr = suivre(pf["tr"][1], d) if pf["tr"][1] else None
+    us = dict(d=d, o=[round(spx[k]["o"], 2) for k in idx], l=[round(spx[k]["l"], 2) for k in idx], c=[round(x, 2) for x in c],
+              tr=[round(x, 2) for x in tr] if tr and None not in tr else [round(x, 2) for x in c],
+              irx=[round(x, 3) for x in suivre(pf["irx"][1], d, 4.0)],
+              es=[round(x, 2) for x in suivre(pf["es"][1], d, c[0])] if pf["es"][1] else [round(x, 2) for x in c],
+              fx=[round(x, 5) for x in suivre(pf["fx"][1], d, series["eurusd"][-1]["c"])],
+              lev=[round(sc[k]["levier"], 4) for k in idx],
+              pea=suivre(sorted(part.items()), d))
+    sources = {k: v[0] for k, v in pf.items()}
+    return dict(debut=d[0], taux_bce=TAUX_BCE, sources=sources, us=us,
+                lqq=dict(d=[x[0] for x in pf["lqq"][1]], c=[round(x[1], 4) for x in pf["lqq"][1]]),
+                mf=dict(d=[x[0] for x in pf["mf"][1]], c=[round(x[1], 4) for x in pf["mf"][1]]))
 
 
 # ---------------------------------------------------------------- calendrier
@@ -177,10 +249,11 @@ def construire_etat(series, maintenant, ancien):
     def r(x, n):
         x = round(x, n)
         return int(x) if x == int(x) else x
-    histo = dict(d=[b["d"] for b in ndx], c=[r(b["c"], 2) for b in ndx], p=[r(x, 2) for x in part])
+    histo = dict(d=[b["d"] for b in ndx], c=[r(b["c"], 2) for b in ndx], p=[r(x, 2) for x in part],
+                 f=[1 if x["frein_rapide"] else 0 for x in sp])
     histo_cto = dict(d=[b["d"] for b in spx], c=[r(b["c"], 2) for b in spx],
                      l=[r(x["levier"], 2) for x in sc], v=[r(x["levier_vise"], 2) for x in sc])
-    return etat, dict(pea=histo, cto=histo_cto), deja
+    return etat, dict(pea=histo, cto=histo_cto), deja, (sp, sc)
 
 
 # ---------------------------------------------------------------- notification
@@ -218,10 +291,17 @@ def main():
     else:
         series = {k: sans_seance_en_cours(v, maintenant) for k, v in charger_yahoo().items()}
     ancien = json.load(open(ETAT)) if os.path.exists(ETAT) else None
-    etat, histo, deja = construire_etat(series, maintenant, ancien)
+    etat, histo, deja, (sp, sc) = construire_etat(series, maintenant, ancien)
     os.makedirs(os.path.dirname(ETAT), exist_ok=True)
     json.dump(etat, open(ETAT, "w"), ensure_ascii=False, indent=1)
     json.dump(histo, open(HISTO, "w"), ensure_ascii=False, separators=(",", ":"))
+    if not test:
+        try:
+            pf = construire_portefeuille(series, charger_portefeuille(maintenant), sp, sc)
+            json.dump(pf, open(PORTEF, "w"), ensure_ascii=False, separators=(",", ":"))
+            print("Portefeuille :", pf.get("erreur") or f"{len(pf['us']['d'])} séances, sources {pf['sources']}")
+        except Exception as e:  # la simulation du site ne doit jamais bloquer les signaux
+            print("Portefeuille non mis à jour :", e)
     print("Séance du", etat["seance"], "| PEA", etat["pea"]["part"], "| CTO", round(etat["cto"]["levier"], 2), "|", len(etat["actions"]), "action(s)")
     topic = os.environ.get("NTFY_TOPIC", "").strip()
     if deja:

@@ -41,5 +41,5 @@ jobs:
         run: |
           git config user.name "suivi-strategies"
           git config user.email "suivi-strategies@users.noreply.github.com"
-          git add etat.json historique.json
+          git add etat.json historique.json $(ls portefeuille.json 2>/dev/null)
           git diff --cached --quiet || (git commit -m "Signaux du $(date -u +%F)" && git pull --rebase && git push)
