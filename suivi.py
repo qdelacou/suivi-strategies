@@ -25,6 +25,9 @@ HISTO = os.path.join(ICI, "historique.json")
 # coupe-circuit). Il reste donc affiché à titre d'information, sans changer la part de LQQ.
 COUPE_CIRCUIT_PEA = False
 TICKERS = {"ndx": "^NDX", "spx": "^GSPC", "es": "ES=F", "eurusd": "EURUSD=X"}
+# tout l'historique pour les indices (graphiques du site, règles calculées comme dans les simulateurs),
+# un mois suffit pour le contrat ES et l'euro-dollar
+PERIODES = {"ndx": "max", "spx": "max", "es": "1mo", "eurusd": "1mo"}
 
 
 # ---------------------------------------------------------------- données
@@ -35,7 +38,7 @@ def charger_yahoo():
         df = None
         for _ in range(3):
             try:
-                df = yf.Ticker(tk).history(period="5y", interval="1d", auto_adjust=False)
+                df = yf.Ticker(tk).history(period=PERIODES[cle], interval="1d", auto_adjust=False)
                 if len(df):
                     break
             except Exception as e:  # coupure réseau passagère : on réessaie
@@ -169,8 +172,14 @@ def construire_etat(series, maintenant, ancien):
         for a in actions + alertes:
             etat["journal"].insert(0, dict(seance=etat["seance"], **a))
         etat["journal"] = etat["journal"][:60]
-    histo = [dict(d=ndx[k]["d"], ndx=round(ndx[k]["c"], 2), part=part[k]) for k in range(max(0, i - 520), i + 1)]
-    histo_cto = [dict(d=spx[k]["d"], spx=round(spx[k]["c"], 2), lev=round(sc[k]["levier"], 3)) for k in range(max(0, j - 520), j + 1)]
+    # historique complet pour les graphiques, en colonnes pour rester léger :
+    # d = date, c = clôture, p = part de LQQ, l = levier retenu, v = levier calculé ce jour-là
+    def r(x, n):
+        x = round(x, n)
+        return int(x) if x == int(x) else x
+    histo = dict(d=[b["d"] for b in ndx], c=[r(b["c"], 2) for b in ndx], p=[r(x, 2) for x in part])
+    histo_cto = dict(d=[b["d"] for b in spx], c=[r(b["c"], 2) for b in spx],
+                     l=[r(x["levier"], 2) for x in sc], v=[r(x["levier_vise"], 2) for x in sc])
     return etat, dict(pea=histo, cto=histo_cto), deja
 
 
