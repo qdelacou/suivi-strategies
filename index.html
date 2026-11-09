@@ -8,13 +8,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
 <style>
-/* Mise en page : bandeau du jour, une carte par compte (cible, mes chiffres, pourquoi, ce qui ferait changer),
-   historique en graphiques, derniers changements, règles. Pensé d'abord pour le téléphone. */
+/* Mise en page : bandeau du jour, mes comptes (simulation), une carte par stratégie (cible, position, pourquoi,
+   ce qui ferait changer), historique en graphiques, règles. Pensé d'abord pour le téléphone. */
 :root {
   --bg: #f4f3ef; --surface: #ffffff; --surface-2: #f7f6f2; --fg: #161614; --fg-2: #52514e; --muted: #77766f; --line: #e3e1da;
   --accent: #2a78d6; --accent-soft: rgba(42, 120, 214, 0.16);
-  --x0: #86b6ef; --x50: #3987e5; --x100: #104281;           /* part de LQQ : 0 %, 50 %, 100 % (rampe ordinale validée) */
-  --calc: #8a8983; --price: #3d3c39; --mf: #1baf7a; --rest: #d8d6cf;
+  /* état de la stratégie : clair quand tout va bien, puis jaune, orange, rouge (rampe vérifiée pour les daltonismes) */
+  --st0: #bfe3c8; --st1: #f2c12e; --st2: #e8711a; --st3: #a81c17; --band-a: 0.26; --strip-a: 0.62;
+  --pea-c: #2a78d6; --cto-c: #1baf7a;                    /* valeur des deux comptes simulés */
+  --price: #3d3c39; --calc: #52514e; --mf: #1baf7a; --rest: #d8d6cf;
+  --pos: #0b6b0b; --neg: #b3261e;
   --ok: #0ca30c; --ok-ink: #0b6b0b; --ok-bg: #eaf5ea;
   --warn: #fab219; --warn-ink: #7a5000; --warn-bg: #fff3d6;
   --font: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -24,8 +27,10 @@
   :root:not([data-theme="light"]) {
     --bg: #121211; --surface: #1c1c1a; --surface-2: #232321; --fg: #f0efec; --fg-2: #c3c2b7; --muted: #8f8e86; --line: #33332f;
     --accent: #3987e5; --accent-soft: rgba(57, 135, 229, 0.22);
-    --x0: #184f95; --x50: #3987e5; --x100: #9ec5f4;
-    --calc: #8f8e86; --price: #d6d5ce; --mf: #199e70; --rest: #3b3b37;
+    --st0: #35553f; --st1: #f5d050; --st2: #e8701a; --st3: #b0241c; --band-a: 0.24; --strip-a: 0.7;
+    --pea-c: #3987e5; --cto-c: #199e70;
+    --price: #d6d5ce; --calc: #c3c2b7; --mf: #199e70; --rest: #3b3b37;
+    --pos: #6fd36f; --neg: #f07a70;
     --ok: #0ca30c; --ok-ink: #6fd36f; --ok-bg: #16261a;
     --warn: #fab219; --warn-ink: #f6c45a; --warn-bg: #2b2414;
     color-scheme: dark;
@@ -34,8 +39,10 @@
 :root[data-theme="dark"] {
   --bg: #121211; --surface: #1c1c1a; --surface-2: #232321; --fg: #f0efec; --fg-2: #c3c2b7; --muted: #8f8e86; --line: #33332f;
   --accent: #3987e5; --accent-soft: rgba(57, 135, 229, 0.22);
-  --x0: #184f95; --x50: #3987e5; --x100: #9ec5f4;
-  --calc: #8f8e86; --price: #d6d5ce; --mf: #199e70; --rest: #3b3b37;
+  --st0: #35553f; --st1: #f5d050; --st2: #e8701a; --st3: #b0241c; --band-a: 0.24; --strip-a: 0.7;
+  --pea-c: #3987e5; --cto-c: #199e70;
+  --price: #d6d5ce; --calc: #c3c2b7; --mf: #199e70; --rest: #3b3b37;
+  --pos: #6fd36f; --neg: #f07a70;
   --ok: #0ca30c; --ok-ink: #6fd36f; --ok-bg: #16261a;
   --warn: #fab219; --warn-ink: #f6c45a; --warn-bg: #2b2414;
   color-scheme: dark;
@@ -50,6 +57,7 @@ header { display: grid; gap: 2px; }
 header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; }
 header p { color: var(--muted); font-size: 0.88rem; }
 .stale { color: var(--warn-ink); }
+button { font-family: var(--font); }
 
 /* ---- bandeau du jour */
 .today { border-radius: 16px; padding: 16px 18px; display: grid; gap: 10px; border: 1px solid var(--line); background: var(--surface); }
@@ -67,13 +75,18 @@ header p { color: var(--muted); font-size: 0.88rem; }
 .orders .when, .orders .why { color: var(--fg-2); font-size: 0.9rem; }
 .acct { display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; padding: 1px 7px; border-radius: 6px; background: var(--surface-2); color: var(--fg-2); border: 1px solid var(--line); margin-right: 6px; vertical-align: 1px; }
 
-/* ---- cartes des comptes */
+/* ---- panneaux et cartes */
+.panel, .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; gap: 16px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.panel-head h2, .card-head h2 { font-size: 1.15rem; font-weight: 700; }
 .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
 @media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; gap: 18px; min-width: 0; }
-.card-head { display: grid; gap: 2px; }
-.card-head h2 { font-size: 1.15rem; font-weight: 700; }
+.card { gap: 18px; }
+.card-head { display: grid; gap: 4px; }
+.card-head .row1 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 .card-head p { color: var(--muted); font-size: 0.88rem; }
+.badge { display: inline-flex; align-items: center; gap: 7px; font-size: 0.84rem; font-weight: 600; color: var(--fg); padding: 3px 10px 3px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+.badge i { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: 0 0 0 1px color-mix(in srgb, var(--fg) 15%, transparent); }
 .target { display: grid; gap: 10px; }
 .big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .big b { font-size: 2.6rem; line-height: 1; font-weight: 600; letter-spacing: -0.02em; }
@@ -83,7 +96,9 @@ header p { color: var(--muted); font-size: 0.88rem; }
 .bar i { display: block; height: 100%; }
 .legend-row { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.88rem; color: var(--fg-2); }
 .legend-row span { display: inline-flex; align-items: center; gap: 6px; }
-.sw { width: 10px; height: 10px; border-radius: 3px; flex: none; display: inline-block; }
+.sw { width: 12px; height: 12px; border-radius: 3px; flex: none; display: inline-block; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 12%, transparent); }
+.line-sw { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
+.dash-sw { width: 16px; height: 0; border-top: 2px dashed var(--calc); display: inline-block; }
 .track { position: relative; height: 14px; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
 .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); border-radius: 0 7px 7px 0; }
 .track u { position: absolute; top: -1px; bottom: -1px; width: 2px; background: var(--fg-2); }
@@ -91,16 +106,10 @@ header p { color: var(--muted); font-size: 0.88rem; }
 .cap { font-size: 0.9rem; color: var(--fg-2); margin-top: 4px; }
 .cap b { color: var(--fg); }
 .lead { color: var(--fg); font-size: 0.97rem; }
+.block { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 16px; }
+.block h3, .panel h3 { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 details.sub summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 0.9rem; padding: 2px 0; }
 details.sub[open] summary { margin-bottom: 8px; }
-
-.block { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 16px; }
-.block h3 { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
-.field { display: grid; gap: 4px; min-width: 0; }
-.field label { font-size: 0.82rem; color: var(--fg-2); }
-.field input { font: 500 1.05rem var(--font); font-variant-numeric: tabular-nums; color: var(--fg); background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; width: 100%; min-width: 0; }
-.field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .checks li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; }
 .mark { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 0.8rem; font-weight: 700; margin-top: 1px; }
@@ -109,8 +118,7 @@ details.sub[open] summary { margin-bottom: 8px; }
 .mark.info { background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
 .checks b { font-weight: 600; }
 .checks small { display: block; color: var(--muted); font-size: 0.84rem; }
-
-.why { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.why { list-style: none; margin: 0; padding: 0; display: grid; }
 .why li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
 .why li:last-child { border-bottom: 0; }
 .why .k { color: var(--fg-2); font-size: 0.92rem; }
@@ -122,27 +130,40 @@ details.sub[open] summary { margin-bottom: 8px; }
 .next .arr { font-weight: 700; color: var(--fg); text-align: center; }
 .gauge { width: 100%; height: 86px; display: block; }
 
-/* ---- historique */
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
-.panel-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
-.panel-head h2 { font-size: 1.15rem; font-weight: 700; }
+/* ---- mes comptes */
+.linkbtn { font-weight: 600; font-size: 0.9rem; color: var(--accent); background: none; border: 0; padding: 6px 0; cursor: pointer; }
+.settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.settings[hidden] { display: none; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label { font-size: 0.82rem; color: var(--fg-2); }
+.field input { font: 500 1.02rem var(--font); font-variant-numeric: tabular-nums; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; width: 100%; min-width: 0; }
+.field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .tiles { grid-template-columns: 1fr 1fr; } .tiles .tot { grid-column: 1 / -1; } }
+.tile { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 2px; min-width: 0; }
+.tile .lab { font-size: 0.82rem; color: var(--fg-2); display: flex; align-items: center; gap: 6px; }
+.tile .val { font-size: 1.45rem; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; }
+.tile .gain { font-size: 0.86rem; font-weight: 600; }
+.pos { color: var(--pos); } .neg { color: var(--neg); }
+
+/* ---- graphiques */
 .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
 .seg button { font: 600 0.85rem var(--font); color: var(--fg-2); background: transparent; border: 0; border-radius: 7px; padding: 6px 10px; cursor: pointer; min-height: 32px; }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 0 0 1px var(--line); }
 .chartbox { display: grid; gap: 8px; min-width: 0; }
-.chartbox h3 { font-size: 1rem; font-weight: 600; }
+.chartbox h3 { font-size: 1rem; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fg); }
 .readout { font-size: 0.88rem; color: var(--fg-2); min-height: 1.4em; }
 .readout b { color: var(--fg); font-weight: 600; }
-.chart { height: 330px; width: 100%; position: relative; }
+.chart { height: 340px; width: 100%; position: relative; }
+.chart.small { height: 200px; }
+@media (max-width: 560px) { .chart { height: 300px; } .chart.small { height: 180px; } }
 .xaxis { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-top: -2px; padding-right: 56px; }
-@media (max-width: 560px) { .chart { height: 290px; } }
 .stats { font-size: 0.88rem; color: var(--fg-2); }
-.line-sw { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
-.dash-sw { width: 16px; height: 0; border-top: 2px dashed var(--calc); display: inline-block; }
 .changes { list-style: none; margin: 0; padding: 0; display: grid; }
 .changes li { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; padding: 9px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
 .changes li:last-child { border-bottom: 0; }
 .changes time { color: var(--muted); font-size: 0.86rem; white-space: nowrap; }
+.changes div { font-size: 0.94rem; }
 .more { justify-self: start; font: 600 0.9rem var(--font); color: var(--accent); background: none; border: 0; padding: 6px 0; cursor: pointer; }
 details.rules { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 4px 18px; }
 details.rules summary { cursor: pointer; font-weight: 700; padding: 12px 0; }
@@ -161,11 +182,40 @@ footer a { color: inherit; }
 
   <section class="today" id="today" aria-live="polite"></section>
 
+  <!-- ======================= MES COMPTES (simulation) -->
+  <section class="panel" id="comptes">
+    <div class="panel-head">
+      <h2>Mes comptes</h2>
+      <button type="button" class="linkbtn" id="pf-edit" aria-expanded="false" aria-controls="pf-settings">Modifier le départ</button>
+    </div>
+    <p class="note" id="pf-sub"></p>
+    <div class="settings" id="pf-settings" hidden>
+      <div class="field"><label for="pf-debut">Date de départ</label><input id="pf-debut" type="date"></div>
+      <div class="field"><label for="pf-pea">Montant de départ du PEA (€)</label><input id="pf-pea" type="number" min="1000" step="1000" inputmode="decimal"></div>
+      <div class="field"><label for="pf-cto">Montant de départ du CTO (€)</label><input id="pf-cto" type="number" min="1000" step="1000" inputmode="decimal"></div>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <div class="chartbox">
+      <div class="legend-row">
+        <span><i class="line-sw" style="background:var(--pea-c)"></i>PEA</span>
+        <span><i class="line-sw" style="background:var(--cto-c)"></i>CTO</span>
+      </div>
+      <div class="chart small" id="ch-pf"></div>
+      <div class="xaxis" id="xa-pf"><span></span><span></span><span></span></div>
+    </div>
+    <div class="chartbox">
+      <h3>Ordres passés</h3>
+      <ul class="changes" id="orders"><li class="empty">Chargement…</li></ul>
+      <button type="button" class="more" id="more" hidden>Afficher plus</button>
+    </div>
+    <p class="note" id="pf-hyp">Hypothèses : ordres exécutés comme le prévoit la stratégie (LQQ à la clôture d'Euronext le lendemain du signal, futures juste avant la clôture américaine), cours réels de LQQ, de l'ETF managed futures (MFEH) et du S&amp;P 500 dividendes compris, coût de portage des futures au taux américain, liquidités et ETF monétaire au taux de la BCE, frais estimés inclus, sans impôt. En attendant la connexion à tes comptes IBKR.</p>
+  </section>
+
   <div class="cols">
     <!-- ======================= PEA -->
     <article class="card" id="pea">
       <div class="card-head">
-        <h2>PEA</h2>
+        <div class="row1"><h2>PEA</h2><span class="badge" id="pea-badge"></span></div>
         <p>LQQ (Nasdaq-100 ×2) · volatilité courte 100/50/0 + frein rapide</p>
       </div>
       <div class="target">
@@ -174,11 +224,7 @@ footer a { color: inherit; }
         <div class="legend-row" id="pea-legend"></div>
       </div>
       <div class="block">
-        <h3>Mon PEA</h3>
-        <div class="fields">
-          <div class="field"><label for="pea-v">Valeur totale (€)</label><input id="pea-v" type="number" min="0" step="100" inputmode="decimal" placeholder="ex. 60000"></div>
-          <div class="field"><label for="pea-l">Dont LQQ (€)</label><input id="pea-l" type="number" min="0" step="100" inputmode="decimal" placeholder="ex. 30000"></div>
-        </div>
+        <h3>Ton PEA aujourd'hui</h3>
         <ul class="checks" id="pea-checks"></ul>
       </div>
       <div class="block">
@@ -196,25 +242,20 @@ footer a { color: inherit; }
     <!-- ======================= CTO -->
     <article class="card" id="cto">
       <div class="card-head">
-        <h2>CTO de la société</h2>
+        <div class="row1"><h2>CTO de la société</h2><span class="badge" id="cto-badge"></span></div>
         <p>Futures S&amp;P 500 (MES) + ETF managed futures · chez IBKR</p>
       </div>
       <div class="target">
         <div class="big"><b id="cto-big">–</b><span>de levier sur les futures</span><span class="chg" id="cto-chg"></span></div>
         <p class="cap" id="cto-expo-cap"></p>
         <div class="track" aria-hidden="true"><i id="cto-expo"></i><u id="cto-100"></u></div>
-        <p class="note" id="cto-expo-txt"></p>
+        <p class="note">Les futures portent sur la valeur totale du compte. Le trait marque 100&nbsp;%, l'échelle va jusqu'à 4×.</p>
         <p class="cap">Répartition du compte</p>
         <div class="bar" id="cto-bar" aria-hidden="true"></div>
         <div class="legend-row" id="cto-legend"></div>
       </div>
       <div class="block">
-        <h3>Mon compte IBKR</h3>
-        <div class="fields">
-          <div class="field"><label for="cto-v">Valeur du compte (€)</label><input id="cto-v" type="number" min="0" step="1000" inputmode="decimal" placeholder="ex. 200000"></div>
-          <div class="field"><label for="cto-m">Dont ETF managed fut. (€)</label><input id="cto-m" type="number" min="0" step="1000" inputmode="decimal" placeholder="ex. 100000"></div>
-          <div class="field"><label for="cto-n">Contrats MES détenus</label><input id="cto-n" type="number" min="0" step="1" inputmode="numeric" placeholder="ex. 9"></div>
-        </div>
+        <h3>Ton compte aujourd'hui</h3>
         <ul class="checks" id="cto-checks"></ul>
       </div>
       <div class="block">
@@ -246,10 +287,10 @@ footer a { color: inherit; }
     <div class="chartbox">
       <h3>PEA · Nasdaq-100 et part de LQQ</h3>
       <div class="legend-row">
-        <span><i class="line-sw" style="background:var(--x100)"></i>100&nbsp;% LQQ</span>
-        <span><i class="line-sw" style="background:var(--x50)"></i>50&nbsp;%</span>
-        <span><i class="line-sw" style="background:var(--x0)"></i>0&nbsp;%</span>
-        <span>En bas : part de LQQ</span>
+        <span><i class="sw" style="background:var(--st0)"></i>100&nbsp;% LQQ</span>
+        <span><i class="sw" style="background:var(--st1)"></i>50&nbsp;%, marché agité</span>
+        <span><i class="sw" style="background:var(--st2)"></i>50&nbsp;%, frein rapide</span>
+        <span><i class="sw" style="background:var(--st3)"></i>0&nbsp;%</span>
       </div>
       <div class="readout" id="ro-pea"></div>
       <div class="chart" id="ch-pea"></div>
@@ -259,22 +300,18 @@ footer a { color: inherit; }
     <div class="chartbox" style="border-top:1px solid var(--line);padding-top:14px">
       <h3>CTO · S&amp;P 500 et levier des futures</h3>
       <div class="legend-row">
-        <span><i class="line-sw" style="background:var(--price)"></i>S&amp;P 500</span>
-        <span><i class="sw" style="background:var(--accent)"></i>Levier retenu</span>
-        <span><i class="dash-sw"></i>Levier calculé</span>
+        <span><i class="sw" style="background:var(--st0)"></i>3× à 4×</span>
+        <span><i class="sw" style="background:var(--st1)"></i>2× à 3×</span>
+        <span><i class="sw" style="background:var(--st2)"></i>1× à 2×</span>
+        <span><i class="sw" style="background:var(--st3)"></i>moins de 1×</span>
+        <span><i class="dash-sw"></i>levier calculé</span>
       </div>
       <div class="readout" id="ro-cto"></div>
       <div class="chart" id="ch-cto"></div>
       <div class="xaxis" id="xa-cto"><span></span><span></span><span></span></div>
       <p class="stats" id="st-cto"></p>
     </div>
-    <p class="note">Glisse le doigt sur un graphique pour lire une date ; pince pour zoomer. Échelle logarithmique : une même hauteur correspond à une même variation en %.</p>
-  </section>
-
-  <section class="panel">
-    <div class="panel-head"><h2>Derniers changements</h2></div>
-    <ul class="changes" id="changes"><li class="empty">Chargement…</li></ul>
-    <button type="button" class="more" id="more" hidden>Afficher plus</button>
+    <p class="note">Le fond se colore quand la stratégie réduit sa position : jaune, puis orange, puis rouge quand elle coupe. En bas, le trait donne la part de LQQ ou le levier retenu. Glisse le doigt sur un graphique pour lire une date ; pince pour zoomer. Échelle logarithmique en haut : une même hauteur correspond à une même variation en %.</p>
   </section>
 
   <details class="rules">
@@ -284,6 +321,7 @@ footer a { color: inherit; }
       <li><b>Agitation du marché</b> : volatilité du Nasdaq-100 sur 7 séances. Au-dessus de 34&nbsp;%, LQQ passe à 50&nbsp;% ; il remonte à 100&nbsp;% quand elle redescend sous 30&nbsp;%. Au-dessus de 60&nbsp;%, il passe à 0&nbsp;% ; il remonte à 50&nbsp;% sous 50&nbsp;%.</li>
       <li><b>Frein rapide</b> : si le Nasdaq-100 clôture plus de 10&nbsp;% sous son plus haut des 20 dernières séances, LQQ est limité à 50&nbsp;%, jusqu'à ce que l'indice revienne à moins de 5&nbsp;% de ce plus haut. Ce n'est pas une sortie complète.</li>
       <li><b>Frein de krach</b> : 0&nbsp;% après 3 clôtures de suite à plus de 20&nbsp;% sous le plus haut des 12 derniers mois et sous la moyenne des 200 dernières séances ; levé dès qu'une des deux conditions disparaît.</li>
+      <li><b>Pas de coupe-circuit en séance</b> : LQQ ne peut pas être liquidé (il faudrait une baisse de 50&nbsp;% du Nasdaq-100 dans la journée).</li>
       <li><b>Quand agir</b> : le signal tombe le soir après la clôture américaine ; l'ordre se passe le lendemain sur Euronext, de préférence entre 17 h et 17 h 25.</li>
       <li><b>Entre deux ordres</b>, on ne rééquilibre pas : la part de LQQ bouge avec les cours, c'est normal. Les versements se répartissent selon la part du moment.</li>
     </ul>
@@ -295,15 +333,15 @@ footer a { color: inherit; }
       <li><b>Levier calculé</b> chaque soir : 40&nbsp;% ÷ la plus forte des volatilités du S&amp;P 500 sur 10 et 20 séances, plafonné à 4×. Marché calme → levier élevé ; marché agité → levier faible.</li>
       <li><b>Tendance</b> : si le S&amp;P 500 clôture plus de 2&nbsp;% sous sa moyenne des 200 dernières séances, le levier calculé est divisé par 4, jusqu'à un retour à plus de 1&nbsp;% au-dessus.</li>
       <li><b>Zone de maintien</b> : le levier retenu ne change que si le levier calculé s'en écarte de plus de 1. Il prend alors la valeur calculée du jour. Ça évite de trader pour de petites variations. Cette règle porte sur le levier de la stratégie, pas sur ton nombre de contrats.</li>
-      <li><b>Contrats</b> : nombre de MES = levier × valeur du compte en dollars ÷ (5 × cours de l'ES), arrondi. Entre deux changements de levier, ajuste seulement quand l'écart atteint 1 contrat.</li>
+      <li><b>Contrats</b> : nombre de MES = levier × valeur du compte en dollars ÷ (5 × cours de l'ES), arrondi. Entre deux changements de levier, on ajuste seulement quand l'écart atteint 1 contrat.</li>
       <li><b>Frein de krach</b> : levier 0 après 3 clôtures à plus de 14&nbsp;% sous le plus haut sur 12 mois et sous la moyenne des 200 séances.</li>
-      <li><b>Coupe-circuit</b> : si le S&amp;P 500 touche −5&nbsp;% dans la journée, un ordre conditionnel placé à l'avance chez IBKR ramène le levier à 1× jusqu'au lendemain. Une alerte t'avertit aussi sur ton téléphone.</li>
+      <li><b>Coupe-circuit</b> : si le S&amp;P 500 touche −5&nbsp;% dans la journée, un ordre conditionnel placé à l'avance chez IBKR ramène le levier à 1× ; on reprend le levier de la stratégie le lendemain juste avant la clôture. Une alerte t'avertit aussi sur ton téléphone.</li>
       <li><b>ETF managed futures</b> : retour à 50&nbsp;% du compte chaque 1er janvier, ou dès que les liquidités tombent sous 10&nbsp;% du compte.</li>
       <li><b>Quand agir</b> : le levier se change le lendemain du signal, juste avant la clôture américaine.</li>
     </ul>
   </details>
 
-  <footer>Calcul chaque jour de bourse après la clôture américaine, sur les cours de Yahoo Finance, avec les règles exactes des simulateurs. Les montants que tu saisis restent sur cet appareil, ils ne sont envoyés nulle part. Graphiques : <a href="https://www.tradingview.com/" rel="noopener">TradingView Lightweight Charts</a>. Ce n'est pas un conseil financier.</footer>
+  <footer>Calcul chaque jour de bourse après la clôture américaine, sur les cours de Yahoo Finance, avec les règles exactes des simulateurs. Les réglages de la simulation restent sur cet appareil. Graphiques : <a href="https://www.tradingview.com/" rel="noopener">TradingView Lightweight Charts</a>. Ce n'est pas un conseil financier.</footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@5.0.9/dist/lightweight-charts.standalone.production.js"></script>
@@ -314,36 +352,136 @@ footer a { color: inherit; }
   const nf0 = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
   const nf1 = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const nf2 = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const eur = v => nf0.format(Math.round(v)) + " €";
-  const pct = (x, sign) => (sign && x > 0 ? "+" : x < 0 ? "−" : "") + nf1.format(Math.abs(x * 100)) + "\u00a0%";
-  const pct0 = x => nf0.format(Math.round(x * 100)) + "\u00a0%";
+  const eur = v => nf0.format(Math.round(v)) + " €";
+  const eurS = v => (v > 0 ? "+" : v < 0 ? "−" : "") + nf0.format(Math.round(Math.abs(v))) + " €";
+  const pct = (x, sign) => (sign && x > 0 ? "+" : x < 0 ? "−" : "") + nf1.format(Math.abs(x * 100)) + " %";
+  const pct0 = x => nf0.format(Math.round(x * 100)) + " %";
   const lev = x => nf1.format(x) + "×";
   const lev2 = x => nf2.format(x) + "×";
   const dLong = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
   const dShort = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  const dJM = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  const dMois = new Intl.DateTimeFormat("fr-FR", { month: "short", year: "numeric", timeZone: "UTC" });
+  const dJour = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
   const iso2date = s => new Date(s + "T00:00:00Z");
   const jour = s => dLong.format(iso2date(s));
   const Jour = s => { const t = jour(s); return t.charAt(0).toUpperCase() + t.slice(1); };
   const court = s => dShort.format(iso2date(s));
+  const nbj = (a, b) => (iso2date(b) - iso2date(a)) / 864e5;
   const el = (tag, txt, cls) => { const e = document.createElement(tag); if (txt != null) e.textContent = txt; if (cls) e.className = cls; return e; };
   const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-  const num = id => { const v = $(id).value.trim(); return v === "" ? null : +v; };
-  let E = null, H = null;
+  const hexRgb = c => { if (c.startsWith("rgb")) return c.match(/[\d.]+/g).slice(0, 3).map(Number); const h = c.replace("#", ""); const n = parseInt(h.length === 3 ? h.replace(/./g, x => x + x) : h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  const mix = (c, fond, a) => { const x = hexRgb(c), y = hexRgb(fond); return "rgb(" + x.map((v, i) => Math.round(v * a + y[i] * (1 - a))).join(",") + ")"; };
+  const withA = (hex, a) => { const h = hex.replace("#", ""); const n = parseInt(h.length === 3 ? h.replace(/./g, c => c + c) : h, 16); return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")"; };
+  const ffIdx = (dates, d) => { let lo = 0, hi = dates.length - 1, r = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (dates[m] <= d) { r = m; lo = m + 1; } else hi = m - 1; } return r; };
+  let E = null, H = null, P = null, SP = null, SC = null;
 
-  // ----------------------------------------------------------------- calculs communs
-  function peaCalc() {
-    const p = E.pea, V = num("pea-v"), L = num("pea-l");
-    if (!V || V <= 0) return { V: null };
-    const share = L == null ? null : L / V, cible = p.part * V;
-    return { V, L, share, cible, diff: L == null ? null : cible - L };
+  // ----------------------------------------------------------------- états (couleurs : clair → jaune → orange → rouge)
+  const etatPea = (p, f) => p >= 1 ? 0 : p > 0 ? (f ? 2 : 1) : 3;
+  const etatCto = l => l >= 3 ? 0 : l >= 2 ? 1 : l >= 1 ? 2 : 3;
+  const libPea = ["Tout va bien", "Prudence : marché agité", "Frein rapide", "Position coupée"];
+  const libCto = l => l >= 3 ? "Tout va bien" : l >= 2 ? "Prudence" : l >= 1 ? "Levier réduit" : l > 0 ? "Levier très réduit" : "Position coupée";
+  const stCol = i => css("--st" + i);
+  function badge(id, i, txt) { const b = $(id); b.textContent = ""; const d = el("i"); d.style.background = stCol(i); b.append(d, document.createTextNode(txt)); }
+
+  // ----------------------------------------------------------------- simulation des comptes
+  const reglages = () => ({
+    debut: store.get("suivi-pf-debut") || "2026-10-01",
+    pea: +(store.get("suivi-pf-pea") || 100000),
+    cto: +(store.get("suivi-pf-cto") || 100000)
+  });
+  const tauxEur = d => { let r = P.taux_bce[0][1]; for (const [dd, v] of P.taux_bce) if (dd <= d) r = v; return Math.max(0, r - 0.1) / 100; };
+  const debutMin = () => [P.debut, P.lqq.d[0], P.mf.d[0], P.us.d[1]].reduce((a, b) => a > b ? a : b);
+
+  function simPea(debut, V0) {
+    const q = P.lqq, u = P.us, FRAIS = 0.0015;            // courtage + écart achat-vente estimés
+    const i0 = q.d.findIndex(d => d >= debut); if (i0 < 0) return null;
+    let L = 0, M = 0, cur = null; const log = [], vals = [];
+    for (let i = i0; i < q.d.length; i++) {
+      const D = q.d[i];
+      if (i > i0) { L *= q.c[i] / q.c[i - 1]; M *= Math.pow(1 + tauxEur(q.d[i - 1]), nbj(q.d[i - 1], D) / 365); }
+      let k = ffIdx(u.d, D); if (k >= 0 && u.d[k] === D) k--;   // dernier signal américain avant la clôture d'Euronext
+      if (k >= 0) {
+        const cible = u.pea[k];
+        if (cur === null) {
+          L = V0 * cible / (1 + FRAIS); M = V0 - L * (1 + FRAIS); cur = cible;
+          log.push({ d: D, a: "PEA", t: "Départ avec " + eur(V0) + " : " + eur(L) + " de LQQ (" + pct0(cible) + "), " + eur(M) + " d'ETF monétaire." });
+        } else if (cible !== cur) {
+          const V = L + M; let mv = cible * V - L;
+          if (mv > 0) { mv = Math.min(mv, M / (1 + FRAIS)); L += mv; M -= mv * (1 + FRAIS); } else { L += mv; M += -mv * (1 - FRAIS); }
+          log.push({ d: D, a: "PEA", t: (mv < 0 ? "Vente de " : "Achat de ") + eur(Math.abs(mv)) + " de LQQ : " + pct0(cur) + " → " + pct0(cible) + "." });
+          cur = cible;
+        }
+      }
+      vals.push({ time: D, value: L + M });
+    }
+    return { L, M, V: L + M, V0, cur, log, vals, last: q.d[q.d.length - 1] };
   }
-  function ctoCalc() {
-    const c = E.cto, V = num("cto-v"), M = num("cto-m"), n = num("cto-n");
-    if (!V || V <= 0) return { V: null };
-    const parMes = c.es * c.mes_point_usd / c.eurusd;          // valeur d'un MES en euros
-    const exact = c.levier * V / parMes, N = Math.round(exact), N1 = Math.round(V / parMes);
-    return { V, M, n, parMes, exact, N, N1 };
+
+  function simCto(debut, V0) {
+    const u = P.us, n = u.d.length, COMM = 0.62, FRAIS = 0.0015, part = E.cto.seuils.part_mf;   // 0,62 $ par MES et par ordre
+    let k0 = u.d.findIndex(d => d >= debut); if (k0 < 0) return null; if (k0 < 1) k0 = 1;
+    const mfA = d => { const j = ffIdx(P.mf.d, d); return j >= 0 ? P.mf.c[j] : null; };
+    let cash = 0, mf = 0, N = 0, Lapp = null, garde = false; const log = [], vals = [];
+    const ordre = (D, Nn, fx, txt) => { const dn = Nn - N; cash -= COMM * Math.abs(dn) / fx; log.push({ d: D, a: "CTO", t: txt.replace("%A", (dn > 0 ? "achat de " : "vente de ") + Math.abs(dn) + " MES (de " + N + " à " + Nn + ")") }); N = Nn; };
+    for (let k = k0; k < n; k++) {
+      const D = u.d[k], fx = u.fx[k], es = u.es[k];
+      let coupe = false;
+      if (k > k0) {
+        const Vd = cash + mf, esP = u.es[k - 1], fxP = u.fx[k - 1], dt = nbj(u.d[k - 1], D);
+        const rFut = u.tr[k] / u.tr[k - 1] - 1 - u.irx[k - 1] / 100 * dt / 360;     // futures = S&P 500 dividendes compris − taux court
+        const N1 = Math.round(Vd * fxP / (5 * esP)), bas = u.l[k] / u.c[k - 1] - 1;
+        let pnl;
+        if (N > N1 && bas <= -0.05) {                       // coupe-circuit : vente au seuil moins 0,5 % de glissement
+          const xf = Math.min(u.o[k] / u.c[k - 1] - 1, -0.05) - 0.005, reste = (u.c[k] / u.c[k - 1]) / (1 + xf) - 1;
+          pnl = N * 5 * esP * xf + N1 * 5 * esP * (1 + xf) * reste;
+          log.push({ d: D, a: "CTO", t: "Coupe-circuit : le S&P 500 a touché " + pct(bas, true) + ", vente de " + (N - N1) + " MES (de " + N + " à " + N1 + ")." });
+          cash -= COMM * (N - N1) / fx; N = N1; coupe = true;
+        } else pnl = N * 5 * esP * rFut;
+        cash += pnl / fx;
+        const m0 = mfA(u.d[k - 1]), m1 = mfA(D); if (m0 && m1) mf *= m1 / m0;
+        cash += Math.max(0, cash - 10000) * Math.max(0, tauxEur(D) - 0.005) * dt / 360 * Math.min(1, (cash + mf) / 90000);
+      }
+      const Lsig = u.lev[k - 1];                            // signal de la veille, exécuté juste avant la clôture
+      if (k === k0) {
+        mf = V0 * part / (1 + FRAIS); cash = V0 - mf * (1 + FRAIS);
+        const Nn = Math.round(Lsig * V0 * fx / (5 * es)); N = 0; Lapp = Lsig;
+        ordre(D, Nn, fx, "Départ avec " + eur(V0) + " : " + eur(mf) + " d'ETF managed futures, %A, levier " + lev(Lsig) + ".");
+      } else {
+        const V = cash + mf, exact = Lsig * V * fx / (5 * es), Nst = Math.round(exact);
+        if (coupe) garde = true;                             // 1× jusqu'à la clôture du lendemain
+        else if (garde) { garde = false; Lapp = Lsig; if (Nst !== N) ordre(D, Nst, fx, "Reprise après le coupe-circuit : %A, levier " + lev(Lsig) + "."); }
+        else if (Lsig !== Lapp) { const a = Lapp; Lapp = Lsig; ordre(D, Nst, fx, "Levier " + lev(a) + " → " + lev(Lsig) + " : %A."); }
+        else if (Math.abs(N - exact) >= 1) ordre(D, Nst, fx, "Ajustement (le compte a bougé) : %A.");
+        const Vn = cash + mf, an = D.slice(0, 4) !== u.d[k - 1].slice(0, 4);
+        if (an || cash < 0.1 * Vn) {
+          const t = part * Vn, mv = t - mf;
+          if (Math.abs(mv) > 1) { cash -= mv + Math.abs(mv) * FRAIS; mf = t; log.push({ d: D, a: "CTO", t: (mv > 0 ? "Achat de " : "Vente de ") + eur(Math.abs(mv)) + " d'ETF managed futures pour revenir à " + pct0(part) + " (" + (an ? "rééquilibrage annuel" : "liquidités sous 10 %") + ")." }); }
+        }
+      }
+      vals.push({ time: D, value: cash + mf });
+    }
+    const k = n - 1;
+    return { V: cash + mf, V0, cash, mf, N, Lapp, garde, log, vals, es: u.es[k], fx: u.fx[k], last: u.d[k] };
+  }
+
+  function simuler() {
+    SP = SC = null;
+    if (!P || P.erreur || !E) return;
+    const r = reglages(), d = r.debut < debutMin() ? debutMin() : r.debut;
+    SP = simPea(d, r.pea); SC = simCto(d, r.cto);
+  }
+  // ordre en attente pour la prochaine séance, d'après la simulation
+  function attentePea() {
+    if (!SP) return null; const p = E.pea.part; if (p === SP.cur) return null;
+    return { mv: p * SP.V - SP.L, avant: SP.cur, apres: p };
+  }
+  function attenteCto() {
+    if (!SC) return null; const c = E.cto;
+    if (Math.abs(c.levier - SC.Lapp) < 1e-3 && !SC.garde) return null;
+    const Nn = Math.round(c.levier * SC.V * SC.fx / (5 * SC.es));
+    return { Nn, dn: Nn - SC.N, avant: SC.Lapp, apres: c.levier };
   }
   const changeP = () => E.pea.part !== E.pea.part_veille;
   const changeC = () => Math.abs(E.cto.levier - E.cto.levier_veille) > 1e-9;
@@ -351,25 +489,16 @@ footer a { color: inherit; }
   // ----------------------------------------------------------------- bandeau du jour
   function renderToday() {
     const t = $("today"); t.textContent = "";
-    const orders = [];
-    if (changeP()) {
-      const p = E.pea, k = peaCalc(), avant = pct0(p.part_veille), apres = pct0(p.part);
-      let what = "Passer LQQ de " + avant + " à " + apres + " du PEA";
-      if (k.V && k.L != null) {
-        const d = p.part * k.V - k.L;
-        what = (d < 0 ? "Vendre " : "Acheter ") + eur(Math.abs(d)) + " de LQQ (" + avant + " → " + apres + ")";
-      }
-      orders.push({ acct: "PEA", what, when: Jour(E.prochaine) + " sur Euronext, de préférence entre 17 h et 17 h 25. " + (p.part < p.part_veille ? "Le produit de la vente va en ETF monétaire." : "À financer en vendant de l'ETF monétaire."),
-        why: raisonPea() });
+    const orders = [], aP = attentePea(), aC = attenteCto();
+    if (aP || (!SP && changeP())) {
+      const p = E.pea, what = aP ? (aP.mv < 0 ? "Vendre " : "Acheter ") + eur(Math.abs(aP.mv)) + " de LQQ (" + pct0(aP.avant) + " → " + pct0(aP.apres) + ")"
+        : "Passer LQQ de " + pct0(p.part_veille) + " à " + pct0(p.part) + " du PEA";
+      orders.push({ acct: "PEA", what, when: Jour(E.prochaine) + " sur Euronext, de préférence entre 17 h et 17 h 25. " + ((aP ? aP.mv < 0 : p.part < p.part_veille) ? "Le produit de la vente va en ETF monétaire." : "À financer en vendant de l'ETF monétaire."), why: raisonPea() });
     }
-    if (changeC()) {
-      const c = E.cto, k = ctoCalc();
-      let what = "Passer le levier des futures de " + lev(c.levier_veille) + " à " + lev(c.levier);
-      if (k.V && k.n != null) {
-        const d = k.N - k.n;
-        what = d === 0 ? "Garder " + k.N + " MES (levier " + lev(c.levier) + ")" : (d < 0 ? "Vendre " : "Acheter ") + Math.abs(d) + " MES pour finir à " + k.N + " (levier " + lev(c.levier_veille) + " → " + lev(c.levier) + ")";
-      } else if (k.V) what += " : " + k.N + " MES au total";
-      orders.push({ acct: "CTO", what, when: Jour(E.prochaine) + " juste avant la clôture américaine, entre " + c.heure_ordre.replace("–", "et") + " (heure de Paris). Mets ensuite à jour l'ordre conditionnel.", why: raisonCto() });
+    if (aC || (!SC && changeC())) {
+      const c = E.cto, what = aC ? (aC.dn === 0 ? "Garder " + aC.Nn + " MES" : (aC.dn < 0 ? "Vendre " : "Acheter ") + Math.abs(aC.dn) + " MES pour finir à " + aC.Nn) + " (levier " + lev(aC.avant) + " → " + lev(aC.apres) + ")"
+        : "Passer le levier des futures de " + lev(c.levier_veille) + " à " + lev(c.levier);
+      orders.push({ acct: "CTO", what, when: Jour(E.prochaine) + " juste avant la clôture américaine, entre " + c.heure_ordre.replace("–", "et") + " (heure de Paris). Mets ensuite à jour l'ordre conditionnel.", why: SC && SC.garde ? "reprise du levier après le coupe-circuit." : raisonCto() });
     }
     for (const a of E.alertes) orders.push({ acct: a.compte, what: a.titre.replace(/^\w+ : /, ""), when: a.texte, why: "" });
 
@@ -377,10 +506,7 @@ footer a { color: inherit; }
     t.className = "today " + (orders.length ? "todo" : "ok");
     head.append(ico, el("h2", Jour(E.prochaine) + (orders.length ? (orders.length > 1 ? " : " + orders.length + " choses à faire" : " : 1 chose à faire") : " : rien à changer")));
     t.append(head);
-    if (!orders.length) {
-      t.append(el("p", "Les deux stratégies gardent la même cible qu'hier. Vérifie seulement que tes comptes correspondent aux cibles ci-dessous (les coches vertes)."));
-      return;
-    }
+    if (!orders.length) { t.append(el("p", "Les deux stratégies gardent la même cible. Aucun ordre à passer.")); return; }
     const ul = el("ul", null, "orders");
     for (const o of orders) {
       const li = el("li"), w = el("div", null, "what");
@@ -391,7 +517,6 @@ footer a { color: inherit; }
     }
     t.append(ul);
   }
-
   function raisonPea() {
     const p = E.pea;
     if (p.frein_krach) return "frein de krach (Nasdaq-100 à plus de 20 % sous son plus haut sur 12 mois et sous sa moyenne 200 séances).";
@@ -405,32 +530,93 @@ footer a { color: inherit; }
     return "le levier calculé (" + lev2(c.levier_vise) + ") est sorti de la zone de maintien autour de " + lev(c.levier_veille) + ".";
   }
 
+  // ----------------------------------------------------------------- mes comptes
+  let pfChart = null, showAll = false;
+  function renderComptes() {
+    const sec = $("comptes");
+    if (!P || P.erreur || !SP || !SC) {
+      $("tiles").textContent = ""; $("orders").textContent = "";
+      $("pf-sub").textContent = P && !P.erreur ? "La date de départ est après les derniers cours disponibles." : "Simulation indisponible pour l'instant (cours manquants).";
+      return;
+    }
+    const r = reglages(), d0 = r.debut < debutMin() ? debutMin() : r.debut;
+    $("pf-sub").textContent = "Simulation depuis le " + dJM.format(iso2date(d0)) + " avec " + eur(r.pea) + " sur le PEA et " + eur(r.cto) + " sur le CTO, en appliquant exactement la stratégie. En attendant la connexion à tes comptes IBKR.";
+    const tiles = $("tiles"); tiles.textContent = "";
+    const tile = (lab, color, V, V0, cls) => {
+      const t = el("div", null, "tile" + (cls ? " " + cls : "")), l = el("div", null, "lab");
+      if (color) { const s = el("i", null, "line-sw"); s.style.background = color; l.append(s); }
+      l.append(document.createTextNode(lab));
+      const g = V - V0, gain = el("div", eurS(g) + " · " + pct(g / V0, true), "gain " + (g >= 0 ? "pos" : "neg"));
+      t.append(l, el("div", eur(V), "val"), gain); tiles.append(t);
+    };
+    tile("PEA", "var(--pea-c)", SP.V, SP.V0); tile("CTO", "var(--cto-c)", SC.V, SC.V0); tile("Total", null, SP.V + SC.V, SP.V0 + SC.V0, "tot");
+
+    // graphique des valeurs
+    const LC = window.LightweightCharts;
+    if (LC) {
+      if (pfChart) pfChart.remove();
+      pfChart = LC.createChart($("ch-pf"), Object.assign(chartOptions(), { handleScroll: false, handleScale: false }));
+      const fmt = { type: "custom", minMove: 1, formatter: v => nf0.format(v / 1000) + " k€" };
+      const a = pfChart.addSeries(LC.LineSeries, { color: css("--pea-c"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, priceFormat: fmt });
+      const b = pfChart.addSeries(LC.LineSeries, { color: css("--cto-c"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, priceFormat: fmt });
+      a.setData(SP.vals); b.setData(SC.vals);
+      a.priceScale().applyOptions({ scaleMargins: { top: 0.12, bottom: 0.08 } });
+      pfChart.timeScale().fitContent();
+      const first = SP.vals[0].time < SC.vals[0].time ? SP.vals[0].time : SC.vals[0].time, last = SP.last > SC.last ? SP.last : SC.last;
+      const sp = $("xa-pf").children, mid = new Date((iso2date(first).getTime() + iso2date(last).getTime()) / 2).toISOString().slice(0, 10);
+      sp[0].textContent = dJour.format(iso2date(first)); sp[1].textContent = dJour.format(iso2date(mid)); sp[2].textContent = dJour.format(iso2date(last));
+    }
+
+    // ordres passés
+    const all = SP.log.concat(SC.log).sort((x, y) => x.d < y.d ? 1 : x.d > y.d ? -1 : x.a < y.a ? -1 : 1);
+    const ul = $("orders"); ul.textContent = "";
+    for (const o of all.slice(0, showAll ? 200 : 8)) {
+      const li = el("li"), dv = el("div"); dv.append(el("span", o.a, "acct"), document.createTextNode(o.t));
+      li.append(el("time", court(o.d)), dv); ul.append(li);
+    }
+    $("more").hidden = all.length <= 8; $("more").textContent = showAll ? "Afficher moins" : "Afficher tout (" + all.length + ")";
+    if (P.sources && P.sources.mf && P.sources.mf.indexOf("MFEH") < 0) $("pf-hyp").textContent += " ETF managed futures : cours de " + P.sources.mf + " faute de cotation MFEH.";
+  }
+  $("more").addEventListener("click", () => { showAll = !showAll; renderComptes(); });
+  $("pf-edit").addEventListener("click", () => {
+    const s = $("pf-settings"), open = s.hidden; s.hidden = !open; $("pf-edit").setAttribute("aria-expanded", String(open));
+    $("pf-edit").textContent = open ? "Fermer" : "Modifier le départ";
+  });
+  function initReglages() {
+    const r = reglages(); $("pf-debut").value = r.debut; $("pf-pea").value = r.pea; $("pf-cto").value = r.cto;
+    if (P && !P.erreur) { $("pf-debut").min = debutMin(); $("pf-debut").max = P.us.d[P.us.d.length - 1]; }
+    const maj = () => {
+      const d = $("pf-debut").value, a = +$("pf-pea").value, b = +$("pf-cto").value;
+      if (d) store.set("suivi-pf-debut", d); if (a >= 1000) store.set("suivi-pf-pea", String(a)); if (b >= 1000) store.set("suivi-pf-cto", String(b));
+      simuler(); renderAll();
+    };
+    for (const id of ["pf-debut", "pf-pea", "pf-cto"]) $(id).addEventListener("change", maj);
+  }
+
   // ----------------------------------------------------------------- PEA
   function renderPea() {
-    const p = E.pea, s = p.seuils, k = peaCalc();
+    const p = E.pea, s = p.seuils, V = SP ? SP.V : null;
+    badge("pea-badge", etatPea(p.part, p.frein_rapide), libPea[etatPea(p.part, p.frein_rapide)]);
     $("pea-big").textContent = pct0(p.part);
-    $("pea-chg").textContent = changeP() ? "à partir de " + jour(E.prochaine) + " (aujourd'hui " + pct0(p.part_veille) + ")" : "";
+    $("pea-chg").textContent = changeP() ? "à partir de " + jour(E.prochaine) + " (avant : " + pct0(p.part_veille) + ")" : "";
     const bar = $("pea-bar"); bar.textContent = "";
     if (p.part > 0) { const i = el("i"); i.style.width = p.part * 100 + "%"; i.style.background = "var(--accent)"; bar.append(i); }
     if (p.part < 1) { const i = el("i"); i.style.flex = "1"; i.style.background = "var(--rest)"; bar.append(i); }
     const lg = $("pea-legend"); lg.textContent = "";
     const item = (color, txt) => { const sp = el("span"); const sw = el("i", null, "sw"); sw.style.background = color; sp.append(sw, document.createTextNode(txt)); lg.append(sp); };
-    item("var(--accent)", "LQQ " + pct0(p.part) + (k.V ? " · " + eur(k.cible) : ""));
-    item("var(--rest)", "ETF monétaire " + pct0(1 - p.part) + (k.V ? " · " + eur(k.V - k.cible) : ""));
+    item("var(--accent)", "LQQ " + pct0(p.part) + (V ? " · " + eur(V * p.part) : ""));
+    item("var(--rest)", "ETF monétaire " + pct0(1 - p.part) + (V ? " · " + eur(V * (1 - p.part)) : ""));
 
-    // mes chiffres
     const ck = $("pea-checks"); ck.textContent = "";
-    if (!k.V) ck.append(check("info", "Saisis la valeur de ton PEA", "pour avoir les montants exacts à détenir."));
-    else if (k.L == null) ck.append(check("info", "Cible : " + eur(k.cible) + " de LQQ", "Saisis aussi ton montant de LQQ pour vérifier ta position."));
-    else if (changeP()) ck.append(check("todo", (k.diff < 0 ? "Vendre " : "Acheter ") + eur(Math.abs(k.diff)) + " de LQQ " + jour(E.prochaine),
-      "Pour passer de " + pct0(k.share) + " à " + pct0(p.part) + " du PEA, sur Euronext entre 17 h et 17 h 25."));
-    else if (Math.abs(k.share - p.part) <= 0.2) ck.append(check("ok", "Ton PEA est bon : " + pct0(k.share) + " de LQQ",
-      Math.abs(k.share - p.part) < 0.01 ? "Pile sur la cible." : "L'écart avec " + pct0(p.part) + " vient des cours : on ne rééquilibre pas entre deux ordres."));
-    else ck.append(check("todo", (k.diff < 0 ? "Vendre " : "Acheter ") + eur(Math.abs(k.diff)) + " de LQQ",
-      "Tu es à " + pct0(k.share) + " de LQQ pour une cible de " + pct0(p.part) + " : aligne-toi (prochaine séance Euronext, 17 h – 17 h 25)."));
-    if (k.V) ck.append(check("info", "Versements", "Répartis-les comme la cible : " + pct0(p.part) + " en LQQ, " + pct0(1 - p.part) + " en ETF monétaire."));
+    if (!SP) ck.append(check("info", "Simulation indisponible", "Les montants s'afficheront dès que les cours seront disponibles."));
+    else {
+      const a = attentePea(), sh = SP.L / SP.V;
+      ck.append(check("info", eur(SP.V) + " : " + eur(SP.L) + " de LQQ (" + pct0(sh) + ") et " + eur(SP.M) + " d'ETF monétaire",
+        "Compte simulé au " + court(SP.last) + ", clôture d'Euronext."));
+      if (a) ck.append(check("todo", (a.mv < 0 ? "Vendre " : "Acheter ") + eur(Math.abs(a.mv)) + " de LQQ " + jour(E.prochaine), "Pour passer à " + pct0(a.apres) + " du PEA, sur Euronext entre 17 h et 17 h 25."));
+      else ck.append(check("ok", "Rien à faire sur le PEA", Math.abs(sh - p.part) < 0.01 ? "Pile sur la cible." : "L'écart avec " + pct0(p.part) + " vient des cours : on ne rééquilibre pas entre deux ordres."));
+    }
 
-    // pourquoi
     $("pea-why-title").textContent = "Pourquoi " + pct0(p.part) + " ?";
     const w = $("pea-why"); w.textContent = "";
     const pal = p.palier_vol;
@@ -440,7 +626,6 @@ footer a { color: inherit; }
       p.frein_rapide ? "Frein rapide actif : LQQ limité à 50 % (pas une sortie complète). Il se lève quand l'indice revient à moins de 5 % de ce plus haut." : "Frein rapide inactif (il se déclenche au-delà de −10 %).", p.frein_rapide);
     why(w, "Krach (−20 % sur 12 mois et sous la moyenne 200 séances)", p.frein_krach ? "oui" : "non",
       p.frein_krach ? "Frein de krach : LQQ à 0 %." : "Pas de frein de krach.", p.frein_krach);
-
     const lim = [];
     if (pal < 1) lim.push("le marché est agité (volatilité " + pct(p.vol7) + ")");
     if (p.frein_rapide) lim.push("le Nasdaq-100 est " + pct(-p.ecart_haut20) + " sous son plus haut des 20 séances (frein rapide)");
@@ -448,7 +633,6 @@ footer a { color: inherit; }
       : lim.length ? "LQQ " + (p.part === 0 ? "à 0 %" : "limité à 50 %") + " parce que " + lim.join(" et ") + ". Le frein rapide ne fait pas tout vendre : il plafonne LQQ à 50 %."
       : "Marché calme (volatilité " + pct(p.vol7) + ") et pas de forte baisse récente : 100 % de LQQ.";
 
-    // ce qui ferait changer
     const nx = $("pea-next"); nx.textContent = "";
     const h20 = p.cloture / (1 + p.ecart_haut20), haut = "≈ " + nf0.format(h20 * (1 - s.frein_rapide_fin)), bas = "≈ " + nf0.format(h20 * (1 - s.frein_rapide));
     if (p.frein_krach) next(nx, "↑", "Fin du frein de krach dès que le Nasdaq-100 repasse au-dessus de sa moyenne 200 séances ou revient à moins de 20 % de son plus haut sur 12 mois.");
@@ -468,48 +652,41 @@ footer a { color: inherit; }
 
   // ----------------------------------------------------------------- CTO
   function renderCto() {
-    const c = E.cto, s = c.seuils, k = ctoCalc();
+    const c = E.cto, s = c.seuils, V = SC ? SC.V : null;
+    badge("cto-badge", etatCto(c.levier), libCto(c.levier));
     $("cto-big").textContent = lev(c.levier);
-    $("cto-chg").textContent = changeC() ? "à partir de " + jour(E.prochaine) + " (aujourd'hui " + lev(c.levier_veille) + ")" : "";
+    $("cto-chg").textContent = changeC() ? "à partir de " + jour(E.prochaine) + " (avant : " + lev(c.levier_veille) + ")" : "";
     const bar = $("cto-bar"); bar.textContent = "";
     { const i = el("i"); i.style.width = s.part_mf * 100 + "%"; i.style.background = "var(--mf)"; bar.append(i); const j = el("i"); j.style.flex = "1"; j.style.background = "var(--rest)"; bar.append(j); }
     const lg = $("cto-legend"); lg.textContent = "";
     const item = (color, txt) => { const sp = el("span"); const sw = el("i", null, "sw"); sw.style.background = color; sp.append(sw, document.createTextNode(txt)); lg.append(sp); };
-    item("var(--mf)", "ETF managed futures " + pct0(s.part_mf) + (k.V ? " · " + eur(k.V * s.part_mf) : ""));
-    item("var(--rest)", "Liquidités (marge) " + pct0(1 - s.part_mf) + (k.V ? " · " + eur(k.V * (1 - s.part_mf)) : ""));
-    const maxT = 4;
-    $("cto-expo").style.width = Math.min(1, c.levier / maxT) * 100 + "%";
-    $("cto-100").style.left = "calc(" + (100 / maxT) + "% - 1px)";
-    const cap = $("cto-expo-cap"); cap.textContent = "Exposition au S&P 500 : "; cap.append(el("b", pct0(c.levier) + " du compte" + (k.V ? " = " + k.N + " MES" : "")));
-    $("cto-expo-txt").textContent = "Les futures portent sur la valeur totale du compte" + (k.V ? " : " + nf1.format(c.levier) + " × " + eur(k.V) + " = " + eur(c.levier * k.V) + " d'exposition" : "") + ". Le trait marque 100 %, l'échelle va jusqu'à 4×.";
+    item("var(--mf)", "ETF managed futures " + pct0(s.part_mf) + (V ? " · " + eur(SC.mf) : ""));
+    item("var(--rest)", "Liquidités (marge) " + pct0(1 - s.part_mf) + (V ? " · " + eur(SC.cash) : ""));
+    $("cto-expo").style.width = Math.min(1, c.levier / 4) * 100 + "%";
+    $("cto-100").style.left = "calc(25% - 1px)";
+    const cap = $("cto-expo-cap"); cap.textContent = "Exposition au S&P 500 : ";
+    cap.append(el("b", pct0(c.levier) + " du compte" + (V ? " = " + Math.round(c.levier * V * SC.fx / (5 * SC.es)) + " MES" : "")));
 
-    // mes chiffres
     const ck = $("cto-checks"); ck.textContent = "";
-    if (!k.V) ck.append(check("info", "Saisis la valeur de ton compte", "pour avoir le nombre de contrats MES et l'ordre de protection."));
+    if (!SC) ck.append(check("info", "Simulation indisponible", "Les montants s'afficheront dès que les cours seront disponibles."));
     else {
-      const ex = "Nombre exact : " + nf1.format(k.exact) + " (1 MES ≈ " + eur(k.parMes) + ", ES à " + nf0.format(c.es) + ").";
-      if (k.n == null) ck.append(check("info", "Cible : " + k.N + " MES", ex + " Saisis tes contrats détenus pour vérifier."));
-      else if (changeC()) ck.append(check("todo", (k.N >= k.n ? "Acheter " : "Vendre ") + Math.abs(k.N - k.n) + " MES " + jour(E.prochaine) + " pour finir à " + k.N, ex + " Juste avant la clôture américaine (" + c.heure_ordre + ")."));
-      else if (Math.abs(k.n - k.exact) < 1) ck.append(check("ok", "Tes futures sont bons : " + k.n + " MES", ex + " On n'ajuste que si l'écart atteint 1 contrat."));
-      else ck.append(check("todo", (k.N > k.n ? "Acheter " : "Vendre ") + Math.abs(k.N - k.n) + " MES pour revenir à " + k.N, ex + " L'écart atteint 1 contrat (la valeur du compte ou le cours a bougé) : ajuste juste avant la clôture américaine."));
-      if (k.M != null) {
-        const sh = k.M / k.V, cash = k.V - k.M, cible = k.V * s.part_mf;
-        if (cash < 0.1 * k.V) ck.append(check("todo", "Vendre " + eur(k.M - cible) + " d'ETF managed futures", "Les liquidités sont sous 10 % du compte : retour à " + pct0(s.part_mf) + "."));
-        else if (Math.abs(sh - s.part_mf) > 0.2) ck.append(check("todo", (cible > k.M ? "Acheter " : "Vendre ") + eur(Math.abs(cible - k.M)) + " d'ETF managed futures", "Tu es à " + pct0(sh) + " pour une cible de " + pct0(s.part_mf) + " : aligne-toi."));
-        else ck.append(check("ok", "ETF managed futures bon : " + pct0(sh) + " du compte", "Retour à " + pct0(s.part_mf) + " le 1er janvier, ou si les liquidités passent sous 10 %."));
-      }
-      const held = k.n != null && !changeC() && Math.abs(k.n - k.exact) < 1 ? k.n : k.N, K = held - k.N1;
+      const parMes = SC.es * 5 / SC.fx, eff = SC.N * parMes / SC.V, a = attenteCto();
+      ck.append(check("info", eur(SC.V) + " : " + SC.N + " MES (levier effectif " + lev(eff) + ")",
+        "ETF managed futures " + eur(SC.mf) + ", liquidités " + eur(SC.cash) + ". 1 MES ≈ " + eur(parMes) + " (ES à " + nf0.format(SC.es) + "). Compte simulé au " + court(SC.last) + "."));
+      if (a) ck.append(check("todo", (a.dn === 0 ? "Garder " + a.Nn + " MES" : (a.dn > 0 ? "Acheter " : "Vendre ") + Math.abs(a.dn) + " MES pour finir à " + a.Nn) + " " + jour(E.prochaine),
+        "Juste avant la clôture américaine (" + c.heure_ordre + ", heure de Paris)."));
+      else ck.append(check("ok", "Rien à faire sur les futures", "On n'ajuste le nombre de contrats que si le levier change ou si l'écart atteint 1 contrat."));
+      const held = a ? a.Nn : SC.N, N1 = Math.round(SC.V * SC.fx / (5 * SC.es)), K = held - N1;
       ck.append(K > 0
-        ? check("info", "Protection −5 % : vendre " + K + " MES sur tes " + held, "Ordre conditionnel à laisser en place chez IBKR : vente au marché de " + K + " MES si la variation du jour de l'ES atteint −5 %. À défaut, un stop vendeur sur " + K + " MES vers " + nf0.format(c.es * 0.95) + " points, à remettre à jour chaque jour. Il ramène le levier à 1×.")
+        ? check("info", "Protection −5 % : vendre " + K + " MES sur " + held, "Ordre conditionnel à laisser en place chez IBKR : vente au marché de " + K + " MES si la variation du jour de l'ES atteint −5 %. À défaut, un stop vendeur sur " + K + " MES vers " + nf0.format(SC.es * 0.95) + " points, à remettre à jour chaque jour. Il ramène le levier à 1×.")
         : check("info", "Pas d'ordre de protection nécessaire", "Le levier ne dépasse pas 1×."));
     }
 
-    // pourquoi
     $("cto-why-title").textContent = "Pourquoi " + lev(c.levier) + " ?";
     const w = $("cto-why"); w.textContent = "";
     const vmax = Math.max(c.vol10, c.vol20);
     why(w, "Agitation du S&P 500 (la plus forte volatilité sur 10 et 20 séances)", pct(vmax),
-      "Levier calculé = 40 % ÷ " + pct(vmax) + (c.tendance_haussiere ? "" : " ÷ 4") + " = " + lev2(c.levier_vise) + (40 / (vmax * 100) > s.plafond ? " (plafonné à 4×)" : "") + ".", false);
+      "Levier calculé = 40 % ÷ " + pct(vmax) + (c.tendance_haussiere ? "" : " ÷ 4") + " = " + lev2(c.levier_vise) + (0.4 / vmax > s.plafond ? " (plafonné à 4×)" : "") + ".", false);
     why(w, "Tendance (écart à la moyenne 200 séances)", pct(c.ecart_mm200, true),
       c.tendance_haussiere ? "Tendance haussière : pas de réduction." : "Tendance baissière : levier calculé divisé par 4.", !c.tendance_haussiere);
     why(w, "Krach (−14 % sur 12 mois et sous la moyenne 200 séances)", c.frein_krach ? "oui" : "non", c.frein_krach ? "Frein de krach : levier 0." : "Pas de frein de krach.", c.frein_krach);
@@ -518,7 +695,6 @@ footer a { color: inherit; }
       : "Ce soir, le levier calculé vaut " + lev2(c.levier_vise) + " (40 % ÷ volatilité de " + pct(vmax) + (c.tendance_haussiere ? "" : ", divisé par 4 car le S&P 500 est sous sa moyenne 200 séances") + "). " +
         (changeC() ? "Il est sorti de la zone de maintien : la stratégie passe à " + lev(c.levier) + "." : "Il reste à moins de 1 de " + lev(c.levier) + " : la stratégie garde " + lev(c.levier) + ".");
 
-    // ce qui ferait changer
     const nx = $("cto-next"); nx.textContent = "";
     const L = c.levier, f = c.tendance_haussiere ? 1 : s.tendance_baissiere, cible = s.cible * f;
     if (c.frein_krach) next(nx, "↑", "Fin du frein de krach dès que le S&P 500 repasse au-dessus de sa moyenne 200 séances ou revient à moins de 14 % de son plus haut sur 12 mois.");
@@ -529,9 +705,7 @@ footer a { color: inherit; }
         const q = c.levier_vise * s.tendance_baissiere, niveau = c.mm200 * (1 + s.sortie_tendance);
         next(nx, "↓", "Si le S&P 500 clôture sous ≈ " + nf0.format(niveau) + " points (2 % sous sa moyenne 200 séances ; clôture : " + nf0.format(c.cloture) + "), le levier calculé est divisé par 4 (≈ " + lev(q) + ")" +
           (Math.abs(q - L) > s.ecart_min ? " et le levier retenu suit." : ", mais l'écart reste sous 1 : le levier retenu ne bouge pas."));
-      } else {
-        next(nx, "↑", "Si le S&P 500 clôture au-dessus de ≈ " + nf0.format(c.mm200 * (1 + s.retour_tendance)) + " points (1 % au-dessus de sa moyenne 200 séances), fin de la division par 4 : levier calculé ≈ " + lev(c.levier_vise / s.tendance_baissiere) + ".");
-      }
+      } else next(nx, "↑", "Si le S&P 500 clôture au-dessus de ≈ " + nf0.format(c.mm200 * (1 + s.retour_tendance)) + " points (1 % au-dessus de sa moyenne 200 séances), fin de la division par 4 : levier calculé ≈ " + lev(c.levier_vise / s.tendance_baissiere) + ".");
       next(nx, "↓", "Krach : levier 0 après 3 clôtures à plus de 14 % sous le plus haut sur 12 mois et sous la moyenne 200 séances.");
     }
     next(nx, "•", "Pendant la séance, si le S&P 500 touche −5 % : l'ordre conditionnel ramène à 1× et tu reçois une alerte.");
@@ -546,30 +720,25 @@ footer a { color: inherit; }
     mk("rect", { x: x(0), y: y - 5, width: x(max) - x(0), height: 10, rx: 5, fill: css("--surface-2"), stroke: css("--line") });
     mk("rect", { x: x(lo), y: y - 5, width: Math.max(2, x(hi) - x(lo)), height: 10, rx: 5, fill: css("--accent-soft") });
     for (let t = 0; t <= max; t++) mk("text", { x: x(t), y: H - 4, "text-anchor": t === 0 ? "start" : t === max ? "end" : "middle", "font-size": 11, fill: css("--muted") }, t + "×");
-    // levier retenu : trait + étiquette au-dessus
     mk("rect", { x: x(L) - 2, y: y - 12, width: 4, height: 24, rx: 2, fill: css("--accent") });
-    const a = mk("text", { x: x(L), y: 14, "text-anchor": x(L) < 70 ? "start" : x(L) > W - 70 ? "end" : "middle", "font-size": 12, "font-weight": 600, fill: css("--fg") }, "retenu " + lev(L));
-    // levier calculé : point + étiquette en dessous
+    mk("text", { x: x(L), y: 14, "text-anchor": x(L) < 70 ? "start" : x(L) > W - 70 ? "end" : "middle", "font-size": 12, "font-weight": 600, fill: css("--fg") }, "retenu " + lev(L));
     mk("circle", { cx: x(V), cy: y, r: 5, fill: css("--surface"), stroke: css("--fg"), "stroke-width": 2 });
     mk("text", { x: x(V), y: y + 22, "text-anchor": x(V) < 70 ? "start" : x(V) > W - 70 ? "end" : "middle", "font-size": 12, fill: css("--fg-2") }, "calculé " + lev2(V));
     const s = c.seuils, f = c.tendance_haussiere ? 1 : s.tendance_baissiere, vUp = s.cible * f / (L + s.ecart_min), vDn = L - s.ecart_min > 0 ? s.cible * f / (L - s.ecart_min) : null;
     $("cto-gauge-txt").textContent = "La stratégie garde " + lev(L) + " tant que le levier calculé reste dans la zone bleue (" + lev(lo) + " à " + lev(hi) + ")" +
       (c.frein_krach ? "." : ", c'est-à-dire tant que la volatilité reste entre " + pct(vUp) + (vDn ? " et " + pct(vDn) : " et plus") + " (aujourd'hui " + pct(Math.max(c.vol10, c.vol20)) + ")" +
       (c.tendance_haussiere ? " et que le S&P 500 ne clôture pas sous ≈ " + nf0.format(c.mm200 * (1 + s.sortie_tendance)) + " points" : "") + ".") +
-      " S'il en sort, elle passe au levier calculé du jour et tu reçois une notification. Ton nombre de contrats doit, lui, toujours correspondre au levier retenu.";
+      " S'il en sort, elle passe au levier calculé du jour et tu reçois une notification. Le nombre de contrats suit toujours le levier retenu.";
   }
 
   function check(kind, title, sub) {
     const li = el("li"), m = el("span", kind === "ok" ? "✓" : kind === "todo" ? "!" : "i", "mark " + kind), d = el("div");
-    m.setAttribute("aria-hidden", "true");
-    d.append(el("b", title)); if (sub) d.append(el("small", sub)); li.append(m, d); return li;
+    m.setAttribute("aria-hidden", "true"); d.append(el("b", title)); if (sub) d.append(el("small", sub)); li.append(m, d); return li;
   }
-  function why(ul, k, v, e, limiting) {
-    const li = el("li"); li.append(el("span", k, "k"), el("span", v, "v"), el("span", e, "e" + (limiting ? " lim" : ""))); ul.append(li);
-  }
+  function why(ul, k, v, e, limiting) { const li = el("li"); li.append(el("span", k, "k"), el("span", v, "v"), el("span", e, "e" + (limiting ? " lim" : ""))); ul.append(li); }
   function next(ul, arrow, txt) { const li = el("li"); li.append(el("span", arrow, "arr"), el("span", txt)); ul.append(li); }
 
-  // ----------------------------------------------------------------- graphiques
+  // ----------------------------------------------------------------- graphiques de l'historique
   const charts = {};
   let years = 5;
   function chartOptions() {
@@ -586,50 +755,47 @@ footer a { color: inherit; }
       localization: { locale: "fr-FR" }
     };
   }
-  // repères horizontaux des volets du bas, avec étiquette discrète dans l'échelle
-  const guide = (price, label = true) => ({ price, color: css("--line"), lineWidth: 1, lineStyle: 1, axisLabelVisible: label,
-    axisLabelColor: css("--surface"), axisLabelTextColor: css("--muted") });
-  const xColor = p => p >= 1 ? css("--x100") : p > 0 ? css("--x50") : css("--x0");
+  const guide = (price, label = true) => ({ price, color: css("--line"), lineWidth: 1, lineStyle: 1, axisLabelVisible: label, axisLabelColor: css("--surface"), axisLabelTextColor: css("--muted") });
+  const priceFmt = { type: "custom", minMove: 0.01, formatter: v => nf0.format(v) };
+
+  // un graphique : cours en haut sur fond coloré selon l'état, bande d'état + exposition en bas
+  function strategyChart(box, h, etat, expo, max, fmtExpo, guides, calc) {
+    const LC = window.LightweightCharts, chart = LC.createChart(box, chartOptions());
+    const ba = parseFloat(css("--band-a")) || 0.25, sa = parseFloat(css("--strip-a")) || 0.6, cols = [0, 1, 2, 3].map(stCol);
+    const plein = () => ({ priceRange: { minValue: 0, maxValue: 1 } });
+    const bands = chart.addSeries(LC.HistogramSeries, { priceScaleId: "fond", priceLineVisible: false, lastValueVisible: false, base: 0, autoscaleInfoProvider: plein }, 0);
+    bands.priceScale().applyOptions({ scaleMargins: { top: 0, bottom: 0 } });
+    const fond = css("--surface"), tb = cols.map(c => mix(c, fond, ba)), ts = cols.map(c => mix(c, fond, sa));
+    bands.setData(h.d.map((d, i) => { const s = etat(i); return { time: d, value: 1, color: s === 0 ? fond : tb[s] }; }));
+    const price = chart.addSeries(LC.LineSeries, { lineWidth: 2, color: css("--price"), priceLineVisible: false, lastValueVisible: false, crosshairMarkerRadius: 4, priceFormat: priceFmt }, 0);
+    price.priceScale().applyOptions({ mode: 1, scaleMargins: { top: 0.1, bottom: 0.05 } });
+    price.setData(h.d.map((d, i) => ({ time: d, value: h.c[i] })));
+    const strip = chart.addSeries(LC.HistogramSeries, { priceScaleId: "bande", priceLineVisible: false, lastValueVisible: false, base: 0, autoscaleInfoProvider: plein }, 1);
+    strip.priceScale().applyOptions({ scaleMargins: { top: 0, bottom: 0 } });
+    strip.setData(h.d.map((d, i) => ({ time: d, value: 1, color: ts[etat(i)] })));
+    const pf = { type: "custom", minMove: 0.01, formatter: fmtExpo };
+    const auto = () => ({ priceRange: { minValue: 0, maxValue: max }, margins: { above: 12, below: 6 } });
+    let calcS = null;
+    if (calc) {
+      calcS = chart.addSeries(LC.LineSeries, { lineWidth: 1, lineStyle: 2, color: css("--calc"), priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, priceFormat: pf, autoscaleInfoProvider: auto }, 1);
+      calcS.setData(h.d.map((d, i) => ({ time: d, value: calc[i] })));
+    }
+    const ex = chart.addSeries(LC.LineSeries, { lineType: 1, lineWidth: 2, color: css("--fg"), priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, priceFormat: pf, autoscaleInfoProvider: auto }, 1);
+    ex.setData(h.d.map((d, i) => ({ time: d, value: expo[i] })));
+    ex.priceScale().applyOptions({ mode: 0, scaleMargins: { top: 0, bottom: 0 } });
+    for (const [v, lab] of guides) ex.createPriceLine(guide(v, lab));
+    chart.panes()[1].setStretchFactor(0.42); chart.panes()[0].setStretchFactor(1);
+    return chart;
+  }
 
   function buildCharts() {
     if (!window.LightweightCharts || !H) { $("ch-pea").append(el("p", "Graphiques indisponibles (pas de connexion ?).", "empty")); return; }
-    const LC = window.LightweightCharts;
-    for (const key of ["pea", "cto"]) { if (charts[key]) { charts[key].chart.remove(); } }
-    // PEA
-    {
-      const h = H.pea, chart = LC.createChart($("ch-pea"), chartOptions());
-      const price = chart.addSeries(LC.LineSeries, { lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerRadius: 4, priceFormat: { type: "custom", formatter: v => nf0.format(v), minMove: 0.01 } }, 0);
-      price.priceScale().applyOptions({ mode: 1, scaleMargins: { top: 0.1, bottom: 0.05 } });
-      price.setData(h.d.map((d, i) => ({ time: d, value: h.c[i], color: xColor(h.p[i]) })));
-      const expo = chart.addSeries(LC.AreaSeries, { lineType: 1, lineWidth: 2, lineColor: css("--accent"), topColor: css("--accent-soft"), bottomColor: css("--accent-soft"),
-        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-        priceFormat: { type: "custom", minMove: 0.01, formatter: v => Math.abs(v * 2 - Math.round(v * 2)) < 1e-6 && v > -1e-6 && v < 1 + 1e-6 ? nf0.format(v * 100) + "\u00a0%" : "" },
-        autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 1 }, margins: { above: 12, below: 6 } }) }, 1);
-      expo.setData(h.d.map((d, i) => ({ time: d, value: h.p[i] })));
-      expo.priceScale().applyOptions({ mode: 0, scaleMargins: { top: 0, bottom: 0 } });
-      for (const v of [0.5, 1]) expo.createPriceLine(guide(v));
-      chart.panes()[1].setStretchFactor(0.42); chart.panes()[0].setStretchFactor(1);
-      charts.pea = { chart, price, expo, h, key: "pea" };
-    }
-    // CTO
-    {
-      const h = H.cto, chart = LC.createChart($("ch-cto"), chartOptions());
-      const price = chart.addSeries(LC.LineSeries, { lineWidth: 2, color: css("--price"), priceLineVisible: false, lastValueVisible: false, crosshairMarkerRadius: 4, priceFormat: { type: "custom", formatter: v => nf0.format(v), minMove: 0.01 } }, 0);
-      price.priceScale().applyOptions({ mode: 1, scaleMargins: { top: 0.1, bottom: 0.05 } });
-      price.setData(h.d.map((d, i) => ({ time: d, value: h.c[i] })));
-      const fmt = { type: "custom", minMove: 0.01, formatter: v => Math.abs(v - Math.round(v)) < 1e-6 && v > -1e-6 && v < 4 + 1e-6 ? nf0.format(v) + "×" : "" };
-      const held = chart.addSeries(LC.AreaSeries, { lineType: 1, lineWidth: 2, lineColor: css("--accent"), topColor: css("--accent-soft"), bottomColor: css("--accent-soft"),
-        priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, priceFormat: fmt,
-        autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 4 }, margins: { above: 12, below: 6 } }) }, 1);
-      held.setData(h.d.map((d, i) => ({ time: d, value: h.l[i] })));
-      const calc = chart.addSeries(LC.LineSeries, { lineWidth: 1, lineStyle: 2, color: css("--calc"), priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, priceFormat: fmt,
-        autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 4 }, margins: { above: 12, below: 6 } }) }, 1);
-      calc.setData(h.d.map((d, i) => ({ time: d, value: h.v[i] })));
-      held.priceScale().applyOptions({ mode: 0, scaleMargins: { top: 0, bottom: 0 } });
-      for (const v of [1, 2, 3, 4]) held.createPriceLine(guide(v, v === 1 || v === 4));
-      chart.panes()[1].setStretchFactor(0.48); chart.panes()[0].setStretchFactor(1);
-      charts.cto = { chart, price, held, calc, h, key: "cto" };
-    }
+    for (const k of ["pea", "cto"]) if (charts[k]) charts[k].chart.remove();
+    const hp = H.pea, hc = H.cto;
+    charts.pea = { key: "pea", h: hp, chart: strategyChart($("ch-pea"), hp, i => etatPea(hp.p[i], hp.f ? hp.f[i] : 0), hp.p, 1,
+      v => Math.abs(v * 2 - Math.round(v * 2)) < 1e-6 && v > -1e-6 && v < 1 + 1e-6 ? nf0.format(v * 100) + " %" : "", [[0.5, true], [1, true]]) };
+    charts.cto = { key: "cto", h: hc, chart: strategyChart($("ch-cto"), hc, i => etatCto(hc.l[i]), hc.l, 4,
+      v => Math.abs(v - Math.round(v)) < 1e-6 && v > -1e-6 && v < 4 + 1e-6 ? nf0.format(v) + "×" : "", [[1, true], [2, false], [3, false], [4, true]], hc.v) };
     for (const k of ["pea", "cto"]) {
       const C = charts[k];
       C.chart.subscribeCrosshairMove(param => readout(C, param && param.time ? param.time : null));
@@ -637,28 +803,18 @@ footer a { color: inherit; }
     }
     setPeriod(years);
   }
-
-  const idxOf = (h, t) => { // indice de la date t (chaîne aaaa-mm-jj ou objet) dans h.d
-    const s = typeof t === "string" ? t : t.year + "-" + String(t.month).padStart(2, "0") + "-" + String(t.day).padStart(2, "0");
-    let lo = 0, hi = h.d.length - 1;
-    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (h.d[m] <= s) lo = m; else hi = m - 1; }
-    return lo;
-  };
+  const idxOf = (h, t) => { const s = typeof t === "string" ? t : t.year + "-" + String(t.month).padStart(2, "0") + "-" + String(t.day).padStart(2, "0"); const i = ffIdx(h.d, s); return i < 0 ? 0 : i; };
   function readout(C, t) {
     const h = C.h, i = t == null ? h.d.length - 1 : idxOf(h, t), ro = $("ro-" + C.key); ro.textContent = "";
     ro.append(el("span", court(h.d[i]) + " · "));
     if (C.key === "pea") {
-      ro.append(el("b", "Nasdaq-100 " + nf0.format(h.c[i]))); ro.append(el("span", " · part de LQQ ")); ro.append(el("b", pct0(h.p[i])));
+      ro.append(el("b", "Nasdaq-100 " + nf0.format(h.c[i]))); ro.append(el("span", " · LQQ ")); ro.append(el("b", pct0(h.p[i])));
+      ro.append(el("span", " · " + libPea[etatPea(h.p[i], h.f ? h.f[i] : 0)].toLowerCase()));
     } else {
-      ro.append(el("b", "S&P 500 " + nf0.format(h.c[i]))); ro.append(el("span", " · levier retenu ")); ro.append(el("b", lev(h.l[i]))); ro.append(el("span", " · calculé " + lev2(h.v[i])));
+      ro.append(el("b", "S&P 500 " + nf0.format(h.c[i]))); ro.append(el("span", " · levier ")); ro.append(el("b", lev(h.l[i]))); ro.append(el("span", " · calculé " + lev2(h.v[i])));
     }
   }
-  function visibleIdx(C) {
-    const r = C.chart.timeScale().getVisibleRange(), h = C.h;
-    if (!r) return [0, h.d.length - 1];
-    return [idxOf(h, r.from), idxOf(h, r.to)];
-  }
-  const dMois = new Intl.DateTimeFormat("fr-FR", { month: "short", year: "numeric", timeZone: "UTC" });
+  function visibleIdx(C) { const r = C.chart.timeScale().getVisibleRange(), h = C.h; if (!r) return [0, h.d.length - 1]; return [idxOf(h, r.from), idxOf(h, r.to)]; }
   function xaxis(C) {
     const h = C.h, [a, b] = visibleIdx(C), sp = $("xa-" + C.key).children;
     const longue = (iso2date(h.d[b]) - iso2date(h.d[a])) / (365.25 * 864e5) > 6, f = i => longue ? h.d[i].slice(0, 4) : dMois.format(iso2date(h.d[i]));
@@ -694,50 +850,27 @@ footer a { color: inherit; }
   }
   for (const b of document.querySelectorAll("#periods button")) b.addEventListener("click", () => setPeriod(+b.dataset.y));
 
-  // ----------------------------------------------------------------- derniers changements
-  let showAll = false;
-  function renderChanges() {
-    const ul = $("changes"); ul.textContent = "";
-    if (!H) { ul.append(el("li", "Historique indisponible.", "empty")); return; }
-    const out = [];
-    const nextDate = (h, i) => i + 1 < h.d.length ? h.d[i + 1] : E.prochaine;   // l'ordre se passe à la séance suivante
-    { const h = H.pea; for (let i = h.d.length - 1; i > 0 && out.length < 400; i--) if (h.p[i] !== h.p[i - 1]) out.push({ d: nextDate(h, i), acct: "PEA", txt: "LQQ " + pct0(h.p[i - 1]) + " → " + pct0(h.p[i]) }); }
-    { const h = H.cto; let c = 0; for (let i = h.d.length - 1; i > 0 && c < 400; i--) if (h.l[i] !== h.l[i - 1]) { out.push({ d: nextDate(h, i), acct: "CTO", txt: "Levier " + lev(h.l[i - 1]) + " → " + lev(h.l[i]) }); c++; } }
-    out.sort((x, y) => x.d < y.d ? 1 : x.d > y.d ? -1 : 0);
-    const list = out.slice(0, showAll ? 40 : 8);
-    for (const o of list) {
-      const li = el("li"), t = el("time", court(o.d)), d = el("div");
-      d.append(el("span", o.acct, "acct"), document.createTextNode(o.txt)); li.append(t, d); ul.append(li);
-    }
-    $("more").hidden = out.length <= 8;
-    $("more").textContent = showAll ? "Afficher moins" : "Afficher plus";
-  }
-  $("more").addEventListener("click", () => { showAll = !showAll; renderChanges(); });
-
   // ----------------------------------------------------------------- rendu
   function renderHeader() {
     const maj = new Date(E.maj), age = (Date.now() - maj) / 864e5;
     const m = $("maj"); m.textContent = "Clôture du " + jour(E.seance) + " · calculé le " + maj.toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).replace(":", " h ");
     if (age > 4) { m.append(" · "); m.append(el("span", "dernier calcul ancien : regarde l'onglet Actions de GitHub", "stale")); }
   }
-  function renderAll() { if (!E) return; renderHeader(); renderToday(); renderPea(); renderCto(); }
+  function renderAll() { if (!E) return; renderHeader(); renderToday(); renderComptes(); renderPea(); renderCto(); }
 
-  for (const id of ["pea-v", "pea-l", "cto-v", "cto-m", "cto-n"]) {
-    const inp = $(id), v = store.get("suivi-" + id); if (v !== null) inp.value = v;
-    inp.addEventListener("input", () => { store.set("suivi-" + id, inp.value); renderAll(); });
-  }
   { const y = store.get("suivi-periode"); if (y !== null && [0, 1, 5, 10, 20].includes(+y)) years = +y; }
   const rethemes = () => { renderAll(); if (H) buildCharts(); };
   if (window.matchMedia) { const mq = window.matchMedia("(prefers-color-scheme: dark)"); mq.addEventListener ? mq.addEventListener("change", rethemes) : mq.addListener(rethemes); }
   let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => E && gauge(E.cto), 150); });
 
-  const nocache = "?t=" + Date.now();
-  fetch("etat.json" + nocache).then(r => { if (!r.ok) throw new Error("absent"); return r.json(); })
-    .then(e => {
-      E = e; renderAll();
-      return fetch("historique.json" + nocache).then(r => r.ok ? r.json() : null).catch(() => null);
+  const nocache = "?t=" + Date.now(), getJson = f => fetch(f + nocache).then(r => r.ok ? r.json() : null).catch(() => null);
+  Promise.all([getJson("etat.json"), getJson("portefeuille.json")])
+    .then(([e, p]) => {
+      if (!e) throw new Error("absent");
+      E = e; P = p; initReglages(); simuler(); renderAll();
+      return getJson("historique.json");
     })
-    .then(h => { if (!E) return; H = h; buildCharts(); renderChanges(); })
+    .then(h => { if (!E) return; H = h; buildCharts(); })
     .catch(() => {
       $("maj").textContent = "Pas encore de données : lance une première fois le calcul (onglet Actions de GitHub, « Signaux », « Run workflow »).";
       $("today").textContent = "";
