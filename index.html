@@ -199,7 +199,9 @@ footer a { color: inherit; }
       <div class="legend-row">
         <span><i class="line-sw" style="background:var(--pea-c)"></i>PEA</span>
         <span><i class="line-sw" style="background:var(--cto-c)"></i>CTO</span>
+        <span>■ jour d'un ordre</span>
       </div>
+      <div class="readout" id="ro-pf"></div>
       <div class="chart small" id="ch-pf"></div>
       <div class="xaxis" id="xa-pf"><span></span><span></span><span></span></div>
     </div>
@@ -363,6 +365,7 @@ footer a { color: inherit; }
   const dJM = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
   const dMois = new Intl.DateTimeFormat("fr-FR", { month: "short", year: "numeric", timeZone: "UTC" });
   const dJour = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", timeZone: "UTC" });
+  const dJourS = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
   const iso2date = s => new Date(s + "T00:00:00Z");
   const jour = s => dLong.format(iso2date(s));
   const Jour = s => { const t = jour(s); return t.charAt(0).toUpperCase() + t.slice(1); };
@@ -557,11 +560,18 @@ footer a { color: inherit; }
       if (pfChart) pfChart.remove();
       pfChart = LC.createChart($("ch-pf"), Object.assign(chartOptions(), { handleScroll: false, handleScale: false }));
       const fmt = { type: "custom", minMove: 1, formatter: v => nf0.format(v / 1000) + " k€" };
-      const a = pfChart.addSeries(LC.LineSeries, { color: css("--pea-c"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, priceFormat: fmt });
-      const b = pfChart.addSeries(LC.LineSeries, { color: css("--cto-c"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, priceFormat: fmt });
+      const a = pfChart.addSeries(LC.LineSeries, { color: css("--pea-c"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, priceFormat: fmt, crosshairMarkerRadius: 3 });
+      const b = pfChart.addSeries(LC.LineSeries, { color: css("--cto-c"), lineWidth: 2, priceLineVisible: false, lastValueVisible: false, priceFormat: fmt, crosshairMarkerRadius: 3 });
       a.setData(SP.vals); b.setData(SC.vals);
       a.priceScale().applyOptions({ scaleMargins: { top: 0.12, bottom: 0.08 } });
+      // un point les jours d'ordre, sur la courbe du compte concerné
+      const pts = (log, vals, color) => { const dd = new Set(vals.map(v => v.time)); return [...new Set(log.map(o => o.d))].filter(d => dd.has(d)).map(d => ({ time: d, position: "inBar", shape: "square", color, size: 0.7 })); };
+      if (LC.createSeriesMarkers) { LC.createSeriesMarkers(a, pts(SP.log, SP.vals, css("--pea-c"))); LC.createSeriesMarkers(b, pts(SC.log, SC.vals, css("--cto-c"))); }
       pfChart.timeScale().fitContent();
+      pfChart.subscribeCrosshairMove(param => { if (param && param.time) lirePf(param.time); });
+      auDoigt(pfChart, $("ch-pf"), a, { d: SP.vals.map(v => v.time), v: SP.vals.map(v => v.value) }, lirePf, true);
+      $("ch-pf").style.touchAction = "pan-y";
+      lirePf(null);
       const first = SP.vals[0].time < SC.vals[0].time ? SP.vals[0].time : SC.vals[0].time, last = SP.last > SC.last ? SP.last : SC.last;
       const sp = $("xa-pf").children, mid = new Date((iso2date(first).getTime() + iso2date(last).getTime()) / 2).toISOString().slice(0, 10);
       sp[0].textContent = dJour.format(iso2date(first)); sp[1].textContent = dJour.format(iso2date(mid)); sp[2].textContent = dJour.format(iso2date(last));
@@ -576,6 +586,38 @@ footer a { color: inherit; }
     }
     $("more").hidden = all.length <= 8; $("more").textContent = showAll ? "Afficher moins" : "Afficher tout (" + all.length + ")";
     if (P.sources && P.sources.mf && P.sources.mf.indexOf("MFEH") < 0) $("pf-hyp").textContent += " ETF managed futures : cours de " + P.sources.mf + " faute de cotation MFEH.";
+  }
+  // sur téléphone, la bibliothèque n'affiche le réticule qu'après un appui long : on le place au simple appui
+  function auDoigt(chart, box, serie, valeurs, lire, glisser) {
+    const place = e => {
+      const r = box.getBoundingClientRect(), t = chart.timeScale().coordinateToTime(e.clientX - r.left);
+      if (t == null) return;
+      const s = typeof t === "string" ? t : t.year + "-" + String(t.month).padStart(2, "0") + "-" + String(t.day).padStart(2, "0");
+      const i = ffIdx(valeurs.d, s); if (i < 0) return;
+      try { chart.setCrosshairPosition(valeurs.v[i], valeurs.d[i], serie); } catch (err) {}
+      lire(valeurs.d[i]);
+    };
+    let appui = false;
+    box.addEventListener("pointerdown", e => { if (e.pointerType !== "mouse") { appui = true; place(e); } });
+    box.addEventListener("pointermove", e => { if (appui && glisser) place(e); });
+    for (const ev of ["pointerup", "pointercancel", "pointerleave"]) box.addEventListener(ev, () => { appui = false; });
+  }
+
+  // lecture jour par jour du petit graphique : valeur de chaque compte et variation sur la séance
+  function lirePf(t) {
+    const ro = $("ro-pf"); ro.textContent = ""; if (!SP || !SC) return;
+    const s = t == null ? (SP.last > SC.last ? SP.last : SC.last) : typeof t === "string" ? t : t.year + "-" + String(t.month).padStart(2, "0") + "-" + String(t.day).padStart(2, "0");
+    ro.append(el("span", dJourS.format(iso2date(s))));
+    for (const [nom, S] of [["PEA", SP], ["CTO", SC]]) {
+      const dates = S.vals.map(v => v.time), i = ffIdx(dates, s);
+      if (i < 0) continue;
+      ro.append(el("span", " · " + nom + " ")); ro.append(el("b", eur(S.vals[i].value)));
+      if (dates[i] !== s) ro.append(el("span", " (pas de cotation ce jour)"));
+      else if (i > 0) { const v = S.vals[i].value / S.vals[i - 1].value - 1; ro.append(el("span", " (" + pct(v, true) + " ce jour)")); }
+      else ro.append(el("span", " (départ)"));
+    }
+    const ords = SP.log.concat(SC.log).filter(o => o.d === s);
+    if (ords.length) ro.append(el("span", " · ordre : " + ords.map(o => o.a).join(" et ")));
   }
   $("more").addEventListener("click", () => { showAll = !showAll; renderComptes(); });
   $("pf-edit").addEventListener("click", () => {
@@ -768,6 +810,7 @@ footer a { color: inherit; }
     const fond = css("--surface"), tb = cols.map(c => mix(c, fond, ba)), ts = cols.map(c => mix(c, fond, sa));
     bands.setData(h.d.map((d, i) => { const s = etat(i); return { time: d, value: 1, color: s === 0 ? fond : tb[s] }; }));
     const price = chart.addSeries(LC.LineSeries, { lineWidth: 2, color: css("--price"), priceLineVisible: false, lastValueVisible: false, crosshairMarkerRadius: 4, priceFormat: priceFmt }, 0);
+    chart.__price = price;
     price.priceScale().applyOptions({ mode: 1, scaleMargins: { top: 0.1, bottom: 0.05 } });
     price.setData(h.d.map((d, i) => ({ time: d, value: h.c[i] })));
     const strip = chart.addSeries(LC.HistogramSeries, { priceScaleId: "bande", priceLineVisible: false, lastValueVisible: false, base: 0, autoscaleInfoProvider: plein }, 1);
@@ -798,7 +841,8 @@ footer a { color: inherit; }
       v => Math.abs(v - Math.round(v)) < 1e-6 && v > -1e-6 && v < 4 + 1e-6 ? nf0.format(v) + "×" : "", [[1, true], [2, false], [3, false], [4, true]], hc.v) };
     for (const k of ["pea", "cto"]) {
       const C = charts[k];
-      C.chart.subscribeCrosshairMove(param => readout(C, param && param.time ? param.time : null));
+      C.chart.subscribeCrosshairMove(param => { if (param && param.time) readout(C, param.time); });
+      auDoigt(C.chart, $("ch-" + k), C.chart.__price, { d: C.h.d, v: C.h.c }, t => readout(C, t), false);
       C.chart.timeScale().subscribeVisibleTimeRangeChange(() => stats(C));
     }
     setPeriod(years);

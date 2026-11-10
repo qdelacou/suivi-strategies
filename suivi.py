@@ -96,6 +96,31 @@ def charger_portefeuille(maintenant):
     return out
 
 
+def fusionner_portefeuille(pf, ancien):
+    """Garde les cours déjà enregistrés que Yahoo ne renvoie plus (il lui arrive d'omettre la dernière séance) :
+    on part de l'ancien fichier, et les nouveaux cours remplacent ou complètent."""
+    if not ancien or ancien.get("erreur"):
+        return pf
+    sources = ancien.get("sources", {})
+    old = {"lqq": ancien.get("lqq"), "mf": ancien.get("mf")}
+    us = ancien.get("us", {})
+    for cle in ("tr", "irx", "es", "fx"):
+        if us.get(cle):
+            old[cle] = dict(d=us["d"], c=us[cle])
+    out = {}
+    for cle, (tk, serie) in pf.items():
+        o = old.get(cle)
+        if o and tk and sources.get(cle) == tk:
+            fus = dict(zip(o["d"], o["c"]))
+            fus.update(dict(serie))
+            perdus = sorted(set(fus) - set(d for d, _ in serie))
+            if perdus and perdus[-1] >= (serie[-1][0] if serie else ""):
+                print(f"{tk} : cours repris de l'enregistrement précédent pour", perdus[-3:])
+            serie = sorted(fus.items())
+        out[cle] = (tk, serie)
+    return out
+
+
 def construire_portefeuille(series, pf, sp, sc):
     """Données compactes pour la simulation faite par le site (date de départ et montants modifiables)."""
     ndx, spx = series["ndx"], series["spx"]
@@ -297,7 +322,11 @@ def main():
     json.dump(histo, open(HISTO, "w"), ensure_ascii=False, separators=(",", ":"))
     if not test:
         try:
-            pf = construire_portefeuille(series, charger_portefeuille(maintenant), sp, sc)
+            try:
+                ancien_pf = json.load(open(PORTEF))
+            except (OSError, ValueError):
+                ancien_pf = None
+            pf = construire_portefeuille(series, fusionner_portefeuille(charger_portefeuille(maintenant), ancien_pf), sp, sc)
             json.dump(pf, open(PORTEF, "w"), ensure_ascii=False, separators=(",", ":"))
             print("Portefeuille :", pf.get("erreur") or f"{len(pf['us']['d'])} séances, sources {pf['sources']}")
         except Exception as e:  # la simulation du site ne doit jamais bloquer les signaux
