@@ -1,20 +1,20 @@
 {
- "maj": "2026-11-20T03:32+01:00",
- "seance": "2026-11-19",
- "prochaine": "2026-11-20",
+ "maj": "2026-11-20T22:40+01:00",
+ "seance": "2026-11-20",
+ "prochaine": "2026-11-23",
  "pea": {
-  "seance": "2026-11-19",
-  "cloture": 26517.05078125,
-  "variation": -0.022097774160380723,
-  "plus_bas": -0.023397083953823006,
+  "seance": "2026-11-20",
+  "cloture": 25028.982421875,
+  "variation": -0.0561174156074401,
+  "plus_bas": -0.060586385676079546,
   "part": 0.5,
   "part_veille": 0.5,
   "palier_vol": 1.0,
-  "vol7": 0.26507826840817866,
-  "ecart_haut20": -0.1105588725826171,
+  "vol7": 0.3184602650667791,
+  "ecart_haut20": -0.1604720099882484,
   "frein_rapide": true,
   "frein_krach": false,
-  "coupe_circuit": false,
+  "coupe_circuit": true,
   "coupe_circuit_applique": false,
   "seuils": {
    "baisse_50": 0.34,
@@ -28,24 +28,24 @@
   }
  },
  "cto": {
-  "seance": "2026-11-19",
-  "cloture": 7175.830078125,
-  "variation": -0.020181222570294644,
-  "plus_bas": -0.020481646724396674,
+  "seance": "2026-11-20",
+  "cloture": 6910.39013671875,
+  "variation": -0.03699083430297834,
+  "plus_bas": -0.04085519287429995,
   "levier": 0.4397417128310645,
-  "levier_veille": 1.5982013247103137,
-  "levier_vise": 0.4397417128310645,
-  "vol10": 0.2011318136092252,
-  "vol20": 0.2274062184280821,
-  "mm200": 7348.020361328125,
-  "ecart_mm200": -0.02343356097777638,
+  "levier_veille": 0.4397417128310645,
+  "levier_vise": 0.3897184998920308,
+  "vol10": 0.2565954657726139,
+  "vol20": 0.25579530952646956,
+  "mm200": 7348.5803125,
+  "ecart_mm200": -0.05962922866011067,
   "tendance_haussiere": false,
   "frein_krach": false,
   "coupe_circuit": false,
   "levier_seance": 1.5982013247103137,
   "coupe_circuit_actif": false,
-  "es": 7176.75,
-  "eurusd": 1.0970927476882935,
+  "es": 6965.0,
+  "eurusd": 1.096611499786377,
   "mes_point_usd": 5,
   "seuils": {
    "cible": 0.4,
@@ -60,13 +60,7 @@
   },
   "heure_ordre": "21 h 40 – 21 h 55"
  },
- "actions": [
-  {
-   "compte": "CTO",
-   "titre": "CTO : futures S&P 500 à 0,4×",
-   "texte": "Passer le levier des futures S&P 500 de 1,6× à 0,4×, vendredi 20 novembre juste avant la clôture (21 h 40 – 21 h 55, heure de Paris). Raison : tendance baissière (levier × 0,25). Nombre de MES et ordre conditionnel à mettre à jour : voir le site."
-  }
- ],
+ "actions": [],
  "alertes": [],
  "journal": [
   {
