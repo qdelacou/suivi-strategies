@@ -1,17 +1,17 @@
 {
- "maj": "2026-11-24T06:28+01:00",
- "seance": "2026-11-23",
- "prochaine": "2026-11-24",
+ "maj": "2026-11-24T22:40+01:00",
+ "seance": "2026-11-24",
+ "prochaine": "2026-11-25",
  "pea": {
-  "seance": "2026-11-23",
-  "cloture": 26746.099609375,
-  "variation": 0.06860523714775013,
-  "plus_bas": 0.05423470823431398,
+  "seance": "2026-11-24",
+  "cloture": 26214.16796875,
+  "variation": -0.01988819485434612,
+  "plus_bas": -0.03030852264308692,
   "part": 0.0,
-  "part_veille": 0.5,
+  "part_veille": 0.0,
   "palier_vol": 0.0,
-  "vol7": 0.6113248517537037,
-  "ecart_haut20": -0.10287606314797271,
+  "vol7": 0.6156066472030897,
+  "ecart_haut20": -0.12071823881258392,
   "frein_rapide": true,
   "frein_krach": false,
   "coupe_circuit": false,
@@ -28,24 +28,24 @@
   }
  },
  "cto": {
-  "seance": "2026-11-23",
-  "cloture": 7237.169921875,
-  "variation": 0.04728818180899608,
-  "plus_bas": 0.0350588048920617,
+  "seance": "2026-11-24",
+  "cloture": 7201.08984375,
+  "variation": -0.0049853849660134175,
+  "plus_bas": -0.013574331838860365,
   "levier": 0.4397417128310645,
   "levier_veille": 0.4397417128310645,
-  "levier_vise": 0.29546212555220835,
-  "vol10": 0.3384528552114878,
-  "vol20": 0.3111539759301795,
-  "mm200": 7350.104663085937,
-  "ecart_mm200": -0.015365052116621425,
+  "levier_vise": 0.29543539209215725,
+  "vol10": 0.33848348125063604,
+  "vol20": 0.3095893176458209,
+  "mm200": 7351.286013183594,
+  "ecart_mm200": -0.0204312781687771,
   "tendance_haussiere": false,
   "frein_krach": false,
   "coupe_circuit": false,
   "levier_seance": 0.4397417128310645,
   "coupe_circuit_actif": false,
-  "es": 7254.5,
-  "eurusd": 1.097152829170227,
+  "es": 7215.25,
+  "eurusd": 1.0968520641326904,
   "mes_point_usd": 5,
   "seuils": {
    "cible": 0.4,
@@ -60,13 +60,7 @@
   },
   "heure_ordre": "21 h 40 – 21 h 55"
  },
- "actions": [
-  {
-   "compte": "PEA",
-   "titre": "PEA : LQQ de 50 % à 0 %",
-   "texte": "Baisser la part de LQQ de 50 % à 0 % du PEA (le reste en ETF monétaire), mardi 24 novembre sur Euronext, de préférence entre 17 h et 17 h 25. Raison : volatilité du Nasdaq-100 sur 7 séances à 61,1 %."
-  }
- ],
+ "actions": [],
  "alertes": [],
  "journal": [
   {
