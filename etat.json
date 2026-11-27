@@ -1,5 +1,5 @@
 {
- "maj": "2026-11-26T23:40+01:00",
+ "maj": "2026-11-27T04:11+01:00",
  "seance": "2026-11-25",
  "prochaine": "2026-11-26",
  "pea": {
@@ -44,8 +44,8 @@
   "coupe_circuit": false,
   "levier_seance": 0.4397417128310645,
   "coupe_circuit_actif": false,
-  "es": 7234.5,
-  "eurusd": 1.0975743532180786,
+  "es": 7297.5,
+  "eurusd": 1.098538875579834,
   "mes_point_usd": 5,
   "seuils": {
    "cible": 0.4,
